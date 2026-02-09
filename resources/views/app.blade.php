@@ -24,7 +24,7 @@
     </head>
     <body class="font-sans antialiased">
         @if(isset($page['component']) && $page['component'] === 'Welcome')
-        <h1 class="sr-only">In Conversation With Bruce W. Cole</h1>
+        <h1 class="sr-only">In Conversation with Bruce W. Cole | Natural Health Podcast</h1>
         @endif
         <script>
             (function() {
