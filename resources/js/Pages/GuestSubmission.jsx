@@ -14,8 +14,8 @@ const tabVariants = {
 };
 
 const TABS = [
-    { id: 'submission', label: 'Guest Submission' },
-    { id: 'lorrie', label: 'About Lorrie Ingram' },
+    { id: 'submission', label: 'Guest Submissions' },
+    { id: 'lorrie', label: 'Meet Lorrie' },
 ];
 
 export default function GuestSubmission() {
@@ -42,7 +42,7 @@ export default function GuestSubmission() {
                         {/* Header */}
                         <div className="p-6 sm:p-8 pb-4 shrink-0">
                             <h1 className="text-3xl sm:text-4xl font-bold barlow-condensed-semibold text-gray-900 mb-4">
-                                Guest Submission
+                                Guest Submissions
                             </h1>
                             <div className="flex gap-1 border-b border-gray-200">
                                 {TABS.map((tab) => (
@@ -82,16 +82,16 @@ export default function GuestSubmission() {
                                             <p>
                                                 Guest coordination is led by Lorrie Ingram, who works closely with our team to identify meaningful conversations and ensure each episode reflects the depth, expertise, and diversity of the community we serve.
                                             </p>
-                                            <p>
+                                            <p className="mt-3">
                                                 Canada's natural health industry is vibrant, dynamic, and continually evolving. Its progress is powered by the people behind it—retailers guiding customers toward better choices, buyers shaping assortments, product specialists educating teams, sales representatives building trusted relationships, and the brand partners, distributors, and brokers bringing innovation to market.
                                             </p>
-                                            <p>
+                                            <p className="mt-3">
                                                 At In Conversation with Bruce W. Cole, we believe the future of the industry is shaped by individuals willing to share their knowledge and experience. The podcast was created to spotlight these voices and capture the perspectives helping move natural health forward across Canada.
                                             </p>
-                                            <p>
+                                            <p className="mt-3">
                                                 If there is someone you believe the industry would benefit from hearing, we welcome your recommendation. Whether you are proposing a respected leader, an emerging voice, a valued colleague, or even yourself, we are always seeking thoughtful conversations that inform, inspire, and strengthen our ecosystem.
                                             </p>
-                                            <p>
+                                            <p className="mt-3">
                                                 To submit a guest idea, please share the individual's name along with a brief note outlining what makes their perspective valuable.
                                             </p>
                                         </div>
@@ -111,7 +111,7 @@ export default function GuestSubmission() {
                                         <div className="flex flex-col lg:flex-row items-start gap-10 lg:gap-12">
                                             <div className="flex-1 order-2 lg:order-1">
                                                 <h2 className="text-lg font-bold barlow-condensed-semibold text-gray-900 mb-4">
-                                                    About Lorrie Ingram
+                                                    Meet Lorrie
                                                 </h2>
                                                 <p>
                                                     With more than 20 years of experience in the natural health industry, Lorrie brings both credibility and firsthand insight to her role as Show Booking Coordinator. A graduate of the Canadian School of Natural Nutrition (CSNN), she began her career as a Registered Holistic Nutritionist before owning and operating a Nutrition House health food store for eight years, where she developed a deep understanding of retail operations and customer care. During this time, she also became a published author of <span className="font-semibold">The Power of Maca</span>.
@@ -145,14 +145,14 @@ export default function GuestSubmission() {
                             animate={{ opacity: 1 }}
                             transition={{ duration: 0.25, delay: 0.15 }}
                         >
-                            <p className="text-sm font-semibold text-gray-900 mb-1">Suggest a Guest</p>
+                            <p className="text-sm font-semibold text-gray-900 mb-1">Submit a Guest</p>
                             <p className="text-sm text-gray-600 mb-1">
                                 Contact:&nbsp;&nbsp;
                                 <a
-                                    href="mailto:guestsubmissions@brucewcole.com"
+                                    href="mailto:guests@brucewcole.com"
                                     className="text-[#b59100] hover:text-[#ffde59] font-medium text-sm underline underline-offset-2 transition-colors"
                                 >
-                                    guestsubmissions@brucewcole.com
+                                    guests@brucewcole.com
                                 </a>
                             </p>
                         </motion.div>

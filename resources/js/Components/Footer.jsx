@@ -12,8 +12,7 @@ export default function Footer() {
                 {/* Desktop Order: title section -> nav -> socials (default flex-row order) */}
                 <nav
                     className="
-                        order-1 flex flex-col gap-2 md:flex-row md:gap-6 
-                        lg:order-2
+                        order-2 flex flex-col gap-2 md:flex-row md:gap-6 
                     "
                     aria-label="Footer navigation"
                 >
@@ -45,7 +44,7 @@ export default function Footer() {
 
                 <div
                     className="
-                        order-2 flex flex-col items-start ml-[-8px] 
+                        order-3 flex flex-col items-start ml-[-8px] 
                         lg:order-3
                     "
                 >
@@ -111,8 +110,7 @@ export default function Footer() {
 
                 <div
                     className="
-                        order-3 text-left 
-                        lg:order-1
+                        order-1 text-left
                     "
                 >
                     <p className="text-sm font-semibold uppercase tracking-widest text-[#ffde59] plus-jakarta-sans-700">
@@ -124,10 +122,13 @@ export default function Footer() {
                     <p className="mt-0.5 font-semibold text-[#ffde59] barlow-condensed-semibold" style={{ fontSize: "1.125rem", lineHeight: "1.75rem" }}>
                         Bruce W. Cole
                     </p>
-                    <p className="mt-2 text-sm font-medium text-gray-300 hover:text-[#ffde59] transition-colors">
+                    <p className="mt-2 text-sm font-medium text-gray-300 hover:text-[#ffde59] transition-colors hidden lg:block">
                         © Miramedia Retail Production. All rights reserved.
                     </p>
                 </div>
+                <p className="order-4 mt-2 text-sm font-medium text-gray-300 hover:text-[#ffde59] transition-colors block lg:hidden">
+                    © Miramedia Retail Production. All rights reserved.
+                </p>
                 <Tooltip id="footer-social" place="top" />
             </div>
         </footer>

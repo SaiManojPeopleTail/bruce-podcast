@@ -29,7 +29,7 @@ export default function About() {
                             {/* Left: title and text */}
                             <div className="flex-1 order-2 lg:order-1">
                                 <h1 className="text-4xl sm:text-5xl font-bold barlow-condensed-semibold text-gray-900 mb-6">
-                                    Meet Bruce W. Cole
+                                    Meet Bruce
                                 </h1>
                                 <div className="space-y-4 text-gray-700 text-lg leading-relaxed">
                                     <p>

@@ -63,7 +63,7 @@ export default function RecentVideos() {
                 className="text-4xl md:text-5xl font-bold barlow-condensed-semibold mb-12 w-full text-center"
                 variants={itemVariants}
             >
-                RECENT EPISODES
+                EPISODES
             </motion.h2>
 
             {videos.length === 0 ? (
@@ -71,12 +71,10 @@ export default function RecentVideos() {
                     className="flex flex-col items-center justify-center py-16 px-6 rounded-2xl border-2 border-dashed border-amber-200 bg-amber-50/30 max-w-xl mx-auto w-full"
                     variants={itemVariants}
                 >
-                    <p className="text-2xl md:text-3xl font-semibold barlow-condensed-semibold text-amber-900 tracking-wide">
-                        Coming Soon
+                    <p className="text-2xl md:text-3xl font-semibold barlow-condensed-semibold text-gray-600 tracking-wide">
+                        Launching Soon
                     </p>
-                    <p className="mt-3 text-gray-600 text-center text-sm md:text-base leading-relaxed max-w-sm">
-                        New episodes are on the way. Check back soon.
-                    </p>
+                    <p className="mt-3 text-gray-600 text-center text-sm md:text-base leading-relaxed max-w-sm">New episodes are on the way. Check back soon.</p>
                 </motion.div>
             ) : (
                 <>

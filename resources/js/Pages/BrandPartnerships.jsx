@@ -18,7 +18,7 @@ const cardItem = { in: { opacity: 0, y: 8 }, active: { opacity: 1, y: 0 } };
 
 const TABS = [
     { id: 'overview', label: 'Overview' },
-    { id: 'investment', label: 'Investment' },
+    { id: 'investment', label: 'Rates' },
     { id: 'emerging', label: 'Emerging Brands' },
 ];
 
@@ -117,14 +117,14 @@ export default function BrandPartnerships() {
                                         <p>
                                             In addition, partners receive a premium 30-second brand feature introducing your organization in a credible, highly contextual environment aligned with the tone of the show.
                                         </p>
-                                        <p>
+                                        <p className="mt-2">
                                             Brands may run the same creative throughout the month or refresh their message across episodes to highlight different products, initiatives, or campaigns.
                                         </p>
                                         <p>Professional production support ensures your brand is represented at the highest standard.</p>
                                         <div className="rounded-lg bg-gray-100 px-0 py-3 text-gray-800 font-medium mt-3">
                                             Commercial Production — $350 per spot
                                         </div>
-                                        <p className="text-sm text-gray-600 mt-1">Includes scripting support, personality selection, and polished video ready for broadcast.</p>
+                                        <p className="text-md text-gray-600 mt-1">Includes scripting support, personality selection, and polished video ready for broadcast.</p>
                                     </div>
                                 </motion.div>
                             )}
@@ -140,8 +140,8 @@ export default function BrandPartnerships() {
                                     transition={quick}
                                 >
                                     <div>
-                                        <h2 className="text-lg font-bold barlow-condensed-semibold text-gray-900 mb-4">
-                                            Partnership Investment
+                                        <h2 className="text-lg font-bold barlow-condensed-semibold text-gray-900 mb-4 ml-1">
+                                            2026 Rates
                                         </h2>
                                         <motion.div
                                             className="grid gap-4 sm:grid-cols-2"
@@ -174,7 +174,7 @@ export default function BrandPartnerships() {
                                                 <p className="mt-2 text-sm text-gray-700">Category leadership and long-term industry positioning</p>
                                             </motion.div>
                                         </motion.div>
-                                        <p className="mt-4 text-gray-700 text-sm leading-relaxed">
+                                        <p className="mt-4 text-gray-700 text-md leading-relaxed">
                                             A one-year partnership offers the greatest strategic advantage, positioning your brand as a consistent and trusted voice within the retail community.
                                         </p>
                                     </div>
