@@ -1,0 +1,112 @@
+import CustomYouTubePlayer from '@/Components/CustomYouTubePlayer';
+import HeroNav from '@/Components/HeroNav';
+import HomeLayout from '@/Layouts/HomeLayout';
+import { Head } from '@inertiajs/react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+
+function formatDatePosted(createdAt) {
+    if (!createdAt) return '';
+    const d = new Date(createdAt);
+    if (isNaN(d.getTime())) return createdAt;
+    return d.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+    });
+}
+
+export default function Episode({ episode }) {
+    const datePosted = formatDatePosted(episode?.created_at);
+    const [copied, setCopied] = useState(false);
+    const copyTimeoutRef = useRef(null);
+
+    const episodeUrl = typeof window !== 'undefined' ? window.location.href : '';
+
+    const handleShare = useCallback(async () => {
+        if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+        try {
+            if (navigator.share) {
+                await navigator.share({ url: episodeUrl, title: episode?.title ?? 'Episode' });
+            } else {
+                await navigator.clipboard.writeText(episodeUrl);
+            }
+            setCopied(true);
+            copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
+        } catch {
+            try {
+                await navigator.clipboard.writeText(episodeUrl);
+                setCopied(true);
+                copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
+            } catch {
+                setCopied(false);
+            }
+        }
+    }, [episodeUrl, episode?.title]);
+
+    useEffect(() => () => {
+        if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    }, []);
+
+    setTimeout(() => {
+        const topTitleItem = document.querySelector('iframe html body #player .ytp-chrome-top');
+        if (topTitleItem) {
+            topTitleItem.style.display = 'none';
+        }
+    }, 200);
+
+    return (
+        <HomeLayout>
+            <Head title={episode?.title ?? 'Episode'} />
+            <section className="relative min-h-screen w-full max-w-7xl mx-auto flex flex-col px-4 sm:px-6 lg:px-8 py-20">
+                <CustomYouTubePlayer
+                    videoUrl={episode?.video_url}
+                    title={episode?.title}
+                    className="w-full h-full max-h-[700px] rounded-xl shadow-lg border border-gray-200 my-6"
+                />
+
+                {/* Title row: title left, share icon right */}
+                <div className="flex items-start justify-between gap-4 mb-4 mx-1">
+                    <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 min-w-0 flex-1">
+                        {episode?.title}
+                    </h1>
+                    <div className="relative shrink-0 pt-1">
+                        <button
+                            type="button"
+                            onClick={handleShare}
+                            className="flex items-center justify-center w-10 h-10 rounded-lg bg-gray-100 hover:bg-gray-200 border border-gray-200 text-gray-700 hover:text-[#b59100] focus:outline-none focus:ring-2 focus:ring-[#ffde59]/50 focus:border-[#ffde59]/40 transition-colors"
+                            aria-label="Share episode"
+                        >
+                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z" />
+                            </svg>
+                        </button>
+                        {copied && (
+                            <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 rounded-lg bg-gray-900 text-white text-sm font-medium shadow-lg border border-[#ffde59]/40 whitespace-nowrap z-10 transition-opacity duration-200">
+                                Link copied
+                                <span className="absolute left-1/2 -translate-x-1/2 top-full border-[6px] border-transparent border-t-gray-900" aria-hidden />
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Date Posted and Description below title */}
+                {datePosted && (
+                    <p className="text-sm text-gray-500 plus-jakarta-sans-700 mb-4 mx-1">
+                        Date Posted: {datePosted}
+                    </p>
+                )}
+                <div
+                    className="prose prose-lg text-gray-700 max-w-none mx-1 prose-p:leading-relaxed long-description"
+                    dangerouslySetInnerHTML={{
+                        __html: episode?.long_description
+                            ? episode.long_description
+                            : (episode?.short_description ? `<p>${String(episode.short_description).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>` : ''),
+                    }}
+                />
+            </section>
+
+            {/* Nav at top on episode page (same as home when scrolled) */}
+            <HeroNav position="top" />
+        </HomeLayout>
+    );
+}
