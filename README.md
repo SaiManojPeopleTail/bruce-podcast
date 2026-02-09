@@ -73,6 +73,35 @@ A podcast video hosting and management platform for **In Conversation With Bruce
 
 ---
 
+## Versions
+
+Version constraints from this project (use `composer show` and `npm ls` for exact resolved versions).
+
+| Category   | Dependency            | Version constraint |
+|-----------|------------------------|--------------------|
+| **PHP**   | php                    | ^8.2               |
+| **Backend** | laravel/framework    | ^12.0              |
+|            | inertiajs/inertia-laravel | ^2.0        |
+|            | laravel/sanctum       | ^4.0               |
+|            | tightenco/ziggy       | ^2.0               |
+| **Frontend** | react / react-dom   | ^18.2.0            |
+|            | @inertiajs/react      | ^2.0.0             |
+|            | vite                  | ^7.0.7             |
+|            | @vitejs/plugin-react  | ^4.2.0             |
+|            | laravel-vite-plugin   | ^2.0.0             |
+| **CSS**   | tailwindcss            | ^3.2.1             |
+|            | @tailwindcss/vite     | ^4.0.0             |
+|            | postcss               | ^8.4.31            |
+| **UI**    | framer-motion          | ^12.31.0           |
+|            | @headlessui/react     | ^2.0.0             |
+|            | react-quill           | ^2.0.0             |
+| **Tooling** | laravel/breeze       | ^2.3 (dev)         |
+
+- **Node:** Use Node 18 LTS or 20 LTS; npm 9+.
+- **Composer:** Use Composer 2.
+
+---
+
 ## Local Setup
 
 1. **Clone and install PHP dependencies**
@@ -131,6 +160,29 @@ A podcast video hosting and management platform for **In Conversation With Bruce
 ---
 
 ## Deployment
+
+### Quick deploy (checklist)
+
+On the server (web root = `public/`):
+
+```bash
+# 1. Install dependencies and build assets
+composer install --no-dev --optimize-autoloader
+cp .env.example .env && php artisan key:generate
+# Edit .env: APP_ENV=production, APP_DEBUG=false, APP_URL, DB_*
+
+# 2. Build frontend
+npm ci && npm run build
+
+# 3. Database and caches
+php artisan migrate --force
+php artisan db:seed --force   # optional
+php artisan config:cache && php artisan route:cache && php artisan view:cache
+```
+
+Then point your web server (Apache/Nginx) at the `public` directory.
+
+---
 
 ### 1. Server / hosting
 
