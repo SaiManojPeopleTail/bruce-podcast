@@ -35,7 +35,7 @@ class PageSeeder extends Seeder
                 'og_image' => null,
             ],
             [
-                'slug' => 'guest-submission',
+                'slug' => 'guest-submissions',
                 'meta_title' => 'Guest Submission',
                 'meta_description' => null,
                 'meta_keywords' => null,

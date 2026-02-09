@@ -20,7 +20,8 @@ Route::get('/api/videos/more', [WelcomeController::class, 'videosMore'])->name('
 Route::get('/meet-bruce', [WelcomeController::class, 'meetBruce'])->name('meet-bruce');
 Route::redirect('/about', '/meet-bruce', 301);
 Route::get('/brand-partnerships', [WelcomeController::class, 'brandPartnerships'])->name('brand-partnerships');
-Route::get('/guest-submission', [WelcomeController::class, 'guestSubmission'])->name('guest-submission');
+Route::get('/guest-submissions', [WelcomeController::class, 'guestSubmission'])->name('guest-submissions');
+Route::redirect('/guest-submission', '/guest-submissions', 301);
 Route::get('/episode/{slug}', [WelcomeController::class, 'episode'])->name('episode');
 
 Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () {

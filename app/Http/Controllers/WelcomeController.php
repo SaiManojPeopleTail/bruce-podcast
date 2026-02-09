@@ -154,7 +154,7 @@ class WelcomeController extends Controller
 
     public function guestSubmission()
     {
-        $this->applyPageMeta('guest-submission');
+        $this->applyPageMeta('guest-submissions');
 
         return Inertia::render('GuestSubmission', [
             'videos' => $this->getVideosForPages(),

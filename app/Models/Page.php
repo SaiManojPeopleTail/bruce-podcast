@@ -27,7 +27,7 @@ class Page extends Model
             'home' => 'Home',
             'about' => 'Meet Bruce',
             'brand-partnerships' => 'Brand Partnerships',
-            'guest-submission' => 'Guest Submission',
+            'guest-submissions' => 'Guest Submission',
             default => $slug,
         };
     }

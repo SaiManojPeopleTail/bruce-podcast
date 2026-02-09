@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 const navItems = [
     { name: 'Home', path: '/' },
     { name: 'Meet Bruce', path: '/meet-bruce' },
-    { name: 'Guest Submission', path: '/guest-submission' },
+    { name: 'Guest Submissions', path: '/guest-submissions' },
     { name: 'Brand Partnerships', path: '/brand-partnerships' },
 ];
 
@@ -104,27 +104,36 @@ export default function HeroNav({ position = 'bottom' }) {
                             exit={{ x: -280 }}
                             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
                         >
-                            {navItems.map((item) => {
-                                const current = url === item.path;
-                                return (
-                                    <Link
-                                        key={item.name}
-                                        href={item.path}
-                                        method="get"
-                                        onClick={() => setMenuOpen(false)}
-                                        className={`
-                                            py-3 border-b border-white/10
-                                            ${linkClass}
-                                            ${current ? 'text-[#ffde59] font-bold' : ''}
-                                        `}
-                                    >
-                                        {item.name}
-                                        {current && (
-                                            <span className="ml-2 text-[#ffde59]">●</span>
-                                        )}
-                                    </Link>
-                                );
-                            })}
+                            <div className="flex flex-col flex-1">
+                                {navItems.map((item) => {
+                                    const current = url === item.path;
+                                    return (
+                                        <Link
+                                            key={item.name}
+                                            href={item.path}
+                                            method="get"
+                                            onClick={() => setMenuOpen(false)}
+                                            className={`
+                                                py-3 border-b border-white/10
+                                                ${linkClass}
+                                                ${current ? 'text-[#ffde59] font-bold' : ''}
+                                            `}
+                                        >
+                                            {item.name}
+                                            {current && (
+                                                <span className="ml-2 text-[#ffde59]">●</span>
+                                            )}
+                                        </Link>
+                                    );
+                                })}
+                            </div>
+                            <a
+                                href="mailto:hello@brucewcole.com"
+                                className="mt-auto pt-4 border-t border-white/10 text-[#ffde59] plus-jakarta-sans-700 text-sm font-semibold hover:text-[#b59100] transition-colors break-all"
+                                onClick={() => setMenuOpen(false)}
+                            >
+                                hello@brucewcole.com
+                            </a>
                         </motion.div>
                     </>
                 )}

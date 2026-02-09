@@ -72,6 +72,7 @@ class Meta
         ];
         if ($title !== '') {
             $data['name'] = $title;
+            $data['headline'] = $title;
         }
         if ($description !== '') {
             $data['description'] = $description;

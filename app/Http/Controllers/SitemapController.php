@@ -22,7 +22,7 @@ class SitemapController extends Controller
             'Allow: /',
             'Allow: /meet-bruce',
             'Allow: /brand-partnerships',
-            'Allow: /guest-submission',
+            'Allow: /guest-submissions',
             'Allow: /episode/',
             'Disallow: /admin',
             'Disallow: /login',
@@ -61,7 +61,7 @@ class SitemapController extends Controller
             ['loc' => $base . '/', 'priority' => '1.0', 'changefreq' => 'weekly'],
             ['loc' => $base . '/meet-bruce', 'priority' => '0.9', 'changefreq' => 'monthly'],
             ['loc' => $base . '/brand-partnerships', 'priority' => '0.9', 'changefreq' => 'monthly'],
-            ['loc' => $base . '/guest-submission', 'priority' => '0.9', 'changefreq' => 'monthly'],
+            ['loc' => $base . '/guest-submissions', 'priority' => '0.9', 'changefreq' => 'monthly'],
         ];
 
         foreach ($static as $entry) {

@@ -23,6 +23,9 @@
         @inertiaHead
     </head>
     <body class="font-sans antialiased">
+        @if(isset($page['component']) && $page['component'] === 'Welcome')
+        <h1 class="sr-only">In Conversation With Bruce W. Cole</h1>
+        @endif
         <script>
             (function() {
                 if (localStorage.getItem('theme') === 'dark') {
