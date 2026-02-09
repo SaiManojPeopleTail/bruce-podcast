@@ -8,14 +8,18 @@ export default function Footer() {
             <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-10 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:gap-12 lg:px-8">
                 {/* Left: hero text compact, left-aligned */}
                 <div className="text-left">
+
                     <p className="text-sm font-semibold uppercase tracking-widest text-[#ffde59] plus-jakarta-sans-700">
                         Podcast
                     </p>
                     <p className="mt-0.5 text-xl font-bold leading-tight text-white anton-regular sm:text-2xl">
                         In Conversation With
                     </p>
-                    <p className="mt-0.5 text-base font-semibold text-[#ffde59] barlow-condensed-semibold">
+                    <p className="mt-0.5 font-semibold text-[#ffde59] barlow-condensed-semibold" style={{ fontSize: "1.125rem", lineHeight: "1.75rem" }}>
                         Bruce W. Cole
+                    </p>
+                    <p className="mt-2 text-xs text-gray-100 leading-relaxed">
+                        © Miramedia Retail Production. All rights reserved.
                     </p>
                 </div>
 
@@ -28,10 +32,16 @@ export default function Footer() {
                         Home
                     </Link>
                     <Link
-                        href={route('about')}
+                        href={route('meet-bruce')}
                         className="text-sm font-medium text-gray-300 hover:text-[#ffde59] transition-colors"
                     >
-                        About
+                        Meet Bruce
+                    </Link>
+                    <Link
+                        href={route('guest-submission')}
+                        className="text-sm font-medium text-gray-300 hover:text-[#ffde59] transition-colors"
+                    >
+                        Guest Submission
                     </Link>
                     <Link
                         href={route('brand-partnerships')}
@@ -42,10 +52,11 @@ export default function Footer() {
                 </nav>
 
                 {/* Right: social icons - always align to the right */}
-                <div className="flex items-center gap-4 self-end lg:self-auto">
-
+                <div className="flex flex-col items-start">
+                    <p className='text-sm font-medium text-gray-300'>Follow and listen to us on:</p>
+                    <div className='flex items-center gap-4 self-end lg:self-auto'>
                     <a
-                        href="https://linkedin.com"
+                        href="https://www.linkedin.com/company/in-conversation-with-bruce-w-cole/"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="p-2 text-gray-400 hover:text-[#ffde59] transition-colors rounded focus:outline-none focus:ring-2 focus:ring-[#ffde59]/50"
@@ -101,6 +112,7 @@ export default function Footer() {
 
                         <i class="bi bi-amazon text-2xl"></i>
                     </a>
+                    </div>
                 </div>
                 <Tooltip id="footer-social" place="top" />
             </div>

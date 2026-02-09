@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 
 const navItems = [
     { name: 'Home', path: '/' },
-    { name: 'About', path: '/about' },
+    { name: 'Meet Bruce', path: '/meet-bruce' },
+    { name: 'Guest Submission', path: '/guest-submission' },
     { name: 'Brand Partnerships', path: '/brand-partnerships' },
 ];
 
@@ -53,6 +54,9 @@ export default function HeroNav({ position = 'bottom' }) {
 
     return (
         <>
+            <div className="fixed top-4 right-4 z-30 hidden md:block bg-black/95 backdrop-blur-sm rounded-full p-2 cursor-pointer px-4 hover:scale-[1.02] transition-all duration-200 shadow-lg text-sm text-gray-300 font-semibold text-[#ffde5a] hover:bg-white hover:shadow-xl hover:text-black cursor-pointer" onClick={() => window.location.href = 'mailto:hello@brucewcole.com'}>
+                hello@brucewcole.com
+            </div>
             {/* Mobile: floating hamburger top left */}
             <div className="fixed top-4 left-4 z-30 md:hidden">
                 <button

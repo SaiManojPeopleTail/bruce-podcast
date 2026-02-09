@@ -134,7 +134,7 @@ class WelcomeController extends Controller
         ]);
     }
 
-    public function about()
+    public function meetBruce()
     {
         $this->applyPageMeta('about');
 
@@ -148,6 +148,15 @@ class WelcomeController extends Controller
         $this->applyPageMeta('brand-partnerships');
 
         return Inertia::render('BrandPartnerships', [
+            'videos' => $this->getVideosForPages(),
+        ]);
+    }
+
+    public function guestSubmission()
+    {
+        $this->applyPageMeta('guest-submission');
+
+        return Inertia::render('GuestSubmission', [
             'videos' => $this->getVideosForPages(),
         ]);
     }

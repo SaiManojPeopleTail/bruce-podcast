@@ -20,8 +20,9 @@ class SitemapController extends Controller
         $lines = [
             'User-agent: *',
             'Allow: /',
-            'Allow: /about',
+            'Allow: /meet-bruce',
             'Allow: /brand-partnerships',
+            'Allow: /guest-submission',
             'Allow: /episode/',
             'Disallow: /admin',
             'Disallow: /login',
@@ -58,8 +59,9 @@ class SitemapController extends Controller
         // Static pages
         $static = [
             ['loc' => $base . '/', 'priority' => '1.0', 'changefreq' => 'weekly'],
-            ['loc' => $base . '/about', 'priority' => '0.9', 'changefreq' => 'monthly'],
+            ['loc' => $base . '/meet-bruce', 'priority' => '0.9', 'changefreq' => 'monthly'],
             ['loc' => $base . '/brand-partnerships', 'priority' => '0.9', 'changefreq' => 'monthly'],
+            ['loc' => $base . '/guest-submission', 'priority' => '0.9', 'changefreq' => 'monthly'],
         ];
 
         foreach ($static as $entry) {

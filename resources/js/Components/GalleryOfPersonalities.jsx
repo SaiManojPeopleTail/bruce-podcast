@@ -1,4 +1,8 @@
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+
+const GAP = 8;
+const VISIBLE = 3;
 
 const DUMMY_PEOPLE = [
     { id: 1, name: 'Alex Morgan', role: 'Host & Producer' },
@@ -12,8 +16,6 @@ const DUMMY_PEOPLE = [
     { id: 9, name: 'Skyler Green', role: 'Retail Relations' },
     { id: 10, name: 'Drew Palmer', role: 'Content Director' },
 ];
-
-const GAP = 8;
 
 function PersonCard({ person, width }) {
     const initial = person.name.split(' ').map((n) => n[0]).join('').slice(0, 2);
@@ -30,8 +32,6 @@ function PersonCard({ person, width }) {
         </div>
     );
 }
-
-const VISIBLE = 3;
 
 export default function GalleryOfPersonalities({ people = DUMMY_PEOPLE, className = '' }) {
     const scrollRef = useRef(null);
@@ -69,22 +69,55 @@ export default function GalleryOfPersonalities({ people = DUMMY_PEOPLE, classNam
         return () => el.removeEventListener('scroll', checkInfinite);
     }, [checkInfinite]);
 
+    const scrollStep = cardWidth + GAP;
+    const scrollLeft = () => {
+        const el = scrollRef.current;
+        if (el) el.scrollBy({ left: -scrollStep, behavior: 'smooth' });
+    };
+    const scrollRight = () => {
+        const el = scrollRef.current;
+        if (el) el.scrollBy({ left: scrollStep, behavior: 'smooth' });
+    };
+
+    const arrowClass =
+        'flex shrink-0 items-center justify-center w-10 h-10 rounded-full border border-gray-200 bg-white text-gray-700 shadow-sm hover:bg-amber-50 hover:border-amber-300 hover:text-amber-800 transition-colors disabled:opacity-40 disabled:pointer-events-none';
+
     return (
-        <div ref={wrapperRef} className={className}>
-            <div
-                ref={scrollRef}
-                className="flex overflow-x-auto overflow-y-hidden py-2 pb-4 scroll-smooth"
-                style={{
-                    gap: GAP,
-                    scrollSnapType: 'x mandatory',
-                    WebkitOverflowScrolling: 'touch',
-                }}
-            >
-                {duplicated.map((person, index) => (
-                    <div key={`${person.id}-${index}`} style={{ scrollSnapAlign: 'center' }}>
-                        <PersonCard person={person} width={cardWidth} />
+        <div className={className}>
+            <div className="flex items-center gap-2">
+                <button
+                    type="button"
+                    onClick={scrollLeft}
+                    className={arrowClass}
+                    aria-label="Previous"
+                >
+                    <ChevronLeft className="w-5 h-5" />
+                </button>
+                <div ref={wrapperRef} className="flex-1 min-w-0">
+                    <div
+                        ref={scrollRef}
+                        className="flex overflow-x-auto overflow-y-hidden py-2 pb-4 scroll-smooth scrollbar-hide"
+                        style={{
+                            gap: GAP,
+                            scrollSnapType: 'x mandatory',
+                            WebkitOverflowScrolling: 'touch',
+                        }}
+                    >
+                        {duplicated.map((person, index) => (
+                            <div key={`${person.id}-${index}`} style={{ scrollSnapAlign: 'center' }}>
+                                <PersonCard person={person} width={cardWidth} />
+                            </div>
+                        ))}
                     </div>
-                ))}
+                </div>
+                <button
+                    type="button"
+                    onClick={scrollRight}
+                    className={arrowClass}
+                    aria-label="Next"
+                >
+                    <ChevronRight className="w-5 h-5" />
+                </button>
             </div>
         </div>
     );

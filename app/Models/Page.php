@@ -25,8 +25,9 @@ class Page extends Model
     {
         return match ($slug) {
             'home' => 'Home',
-            'about' => 'About',
+            'about' => 'Meet Bruce',
             'brand-partnerships' => 'Brand Partnerships',
+            'guest-submission' => 'Guest Submission',
             default => $slug,
         };
     }

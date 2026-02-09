@@ -96,12 +96,12 @@ export default function BrandPartnerships() {
                                         <p>
                                             When a brand partners with the podcast, it does more than advertise. It enters a national conversation that is advancing the collective knowledge of retailers, distributors, and innovators across the industry.
                                         </p>
-                                        <p>
+                                        <p className='mt-2'>
                                             Your message becomes part of a platform designed to inform, inspire, and move the natural products community forward.
                                         </p>
-                                        <p>This is not simply media placement. It is participation in the voice of the industry</p>
+                                        <p className='mt-2'>This is not simply media placement. It is participation in the voice of the industry</p>
                                     </div>
-                                    <div className="pt-4 border-t border-gray-100">
+                                    <div className="pt-2 border-t border-gray-100">
                                         <h2 className="text-lg font-bold barlow-condensed-semibold text-gray-900 mb-3">
                                             Sponsored Recognition Segments
                                         </h2>
@@ -111,7 +111,7 @@ export default function BrandPartnerships() {
                                         <p>
                                             Rather than relying on a single placement, sponsors are woven naturally into the rhythm of the podcast through brief, professionally delivered messages that ensure your brand is consistently heard and remembered.
                                         </p>
-                                        <p>
+                                        <p className='mt-2'>
                                             We produce at least one episode every week, with additional recordings scheduled throughout the year to support seasonal moments and key industry events. Your sponsor recognition will appear in every episode released during your sponsored month, creating strong frequency, sustained presence, and deeper listener familiarity.
                                         </p>
                                         <p>
@@ -178,7 +178,7 @@ export default function BrandPartnerships() {
                                             A one-year partnership offers the greatest strategic advantage, positioning your brand as a consistent and trusted voice within the retail community.
                                         </p>
                                     </div>
-                                    <div className="pt-4 border-t border-gray-100">
+                                    <div className="pt-2 border-t border-gray-100">
                                         <h2 className="text-lg font-bold barlow-condensed-semibold text-gray-900 mb-2">
                                             Bring Your Brand to Life Through Trusted Video Personalities
                                         </h2>
@@ -189,18 +189,16 @@ export default function BrandPartnerships() {
                                         <GalleryOfPersonalities />
                                     </div>
                                     <div className="pt-4 border-t border-gray-100">
-                                        <h2 className="text-lg font-bold barlow-condensed-semibold text-gray-900 mb-3">
-                                            Why Brands Partner With Us
-                                        </h2>
-                                        <p className="text-gray-700 mb-2 text-sm">Brands join the podcast to:</p>
-                                        <ul className="space-y-1 text-gray-700 text-sm list-disc list-inside marker:text-[#b59100]">
+                                        <h3 className="text-base font-semibold text-gray-900 mb-2">Why Brands Partner With Us</h3>
+                                        <p className="text-gray-700 mb-2">Brands join the podcast to:</p>
+                                        <ul className="space-y-1 list-disc list-inside marker:text-[#b59100] text-gray-700">
                                             <li>Reach a concentrated audience of natural health retailers across Canada</li>
                                             <li>Build credibility through association with a trusted industry voice</li>
                                             <li>Educate the market in a format designed for attention and retention</li>
                                             <li>Support a platform committed to elevating the entire ecosystem</li>
                                             <li>Maintain consistent presence through weekly exposure</li>
                                         </ul>
-                                        <p className="mt-3 text-gray-700 text-sm leading-relaxed">
+                                        <p className="mt-3 text-gray-700 leading-relaxed">
                                             Most importantly, partners help fuel a knowledge-driven community where better information leads to stronger retail outcomes.
                                         </p>
                                     </div>

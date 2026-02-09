@@ -8,7 +8,7 @@ import { motion } from 'framer-motion';
 export default function About() {
     return (
         <HomeLayout>
-            <Head title="About" />
+            <Head title="Meet Bruce" />
             {/* Hero section: content only inside a card, nav at bottom */}
             <section className="relative min-h-screen overflow-hidden flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 py-16 pb-28">
                 <HeroVideoBackground />
@@ -29,7 +29,7 @@ export default function About() {
                             {/* Left: title and text */}
                             <div className="flex-1 order-2 lg:order-1">
                                 <h1 className="text-4xl sm:text-5xl font-bold barlow-condensed-semibold text-gray-900 mb-6">
-                                    About Bruce W. Cole
+                                    Meet Bruce W. Cole
                                 </h1>
                                 <div className="space-y-4 text-gray-700 text-lg leading-relaxed">
                                     <p>

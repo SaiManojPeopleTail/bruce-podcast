@@ -136,3 +136,12 @@ iframe html body #player .ytp-chrome-top {
 .ql-container {
     border: none !important;
 }
+
+/* Hide scrollbar but keep scroll behavior */
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
