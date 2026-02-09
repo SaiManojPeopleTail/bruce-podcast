@@ -75,7 +75,7 @@ export default function RecentVideos() {
                         Coming Soon
                     </p>
                     <p className="mt-3 text-gray-600 text-center text-sm md:text-base leading-relaxed max-w-sm">
-                        New episodes are on the way. Check back soon for conversations from Canada's natural health industry.
+                        New episodes are on the way. Check back soon.
                     </p>
                 </motion.div>
             ) : (
