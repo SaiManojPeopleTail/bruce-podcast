@@ -65,34 +65,51 @@ export default function RecentVideos() {
             >
                 RECENT EPISODES
             </motion.h2>
-            <motion.div
-                className="grid grid-cols-1 gap-6 w-full max-w-full"
-                variants={containerVariants}
-            >
-                {videos.map((video, index) => (
-                    <motion.div key={video.id ?? video.slug ?? index} variants={itemVariants}>
-                        <VideoCard video_data={video} />
-                    </motion.div>
-                ))}
-            </motion.div>
 
-            {hasMore && (
-                <motion.div className="mt-10 flex flex-col items-center gap-4" variants={itemVariants}>
-                    {loading ? (
-                        <div className="flex flex-col items-center gap-3 text-gray-600">
-                            <div className="h-10 w-10 border-2 border-[#ffde59] border-t-transparent rounded-full animate-spin" />
-                            <p className="text-sm font-medium">Please wait</p>
-                        </div>
-                    ) : (
-                        <button
-                            type="button"
-                            onClick={loadMore}
-                            className="rounded-lg bg-[#b59100] px-6 py-3 text-sm font-semibold text-white shadow-md hover:bg-[#ffde59] hover:text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-[#ffde59] focus:ring-offset-2"
-                        >
-                            Load more
-                        </button>
-                    )}
+            {videos.length === 0 ? (
+                <motion.div
+                    className="flex flex-col items-center justify-center py-16 px-6 rounded-2xl border-2 border-dashed border-amber-200 bg-amber-50/30 max-w-xl mx-auto w-full"
+                    variants={itemVariants}
+                >
+                    <p className="text-2xl md:text-3xl font-semibold barlow-condensed-semibold text-amber-900 tracking-wide">
+                        Coming Soon
+                    </p>
+                    <p className="mt-3 text-gray-600 text-center text-sm md:text-base leading-relaxed max-w-sm">
+                        New episodes are on the way. Check back soon for conversations from Canada's natural health industry.
+                    </p>
                 </motion.div>
+            ) : (
+                <>
+                    <motion.div
+                        className="grid grid-cols-1 gap-6 w-full max-w-full"
+                        variants={containerVariants}
+                    >
+                        {videos.map((video, index) => (
+                            <motion.div key={video.id ?? video.slug ?? index} variants={itemVariants}>
+                                <VideoCard video_data={video} />
+                            </motion.div>
+                        ))}
+                    </motion.div>
+
+                    {hasMore && (
+                        <motion.div className="mt-10 flex flex-col items-center gap-4" variants={itemVariants}>
+                            {loading ? (
+                                <div className="flex flex-col items-center gap-3 text-gray-600">
+                                    <div className="h-10 w-10 border-2 border-[#ffde59] border-t-transparent rounded-full animate-spin" />
+                                    <p className="text-sm font-medium">Please wait</p>
+                                </div>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={loadMore}
+                                    className="rounded-lg bg-[#b59100] px-6 py-3 text-sm font-semibold text-white shadow-md hover:bg-[#ffde59] hover:text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-[#ffde59] focus:ring-offset-2"
+                                >
+                                    Load more
+                                </button>
+                            )}
+                        </motion.div>
+                    )}
+                </>
             )}
         </motion.section>
     );

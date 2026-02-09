@@ -44,7 +44,7 @@ export default function Welcome() {
                 <HeroNav />
             </section>
 
-            <section className="relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-center">
+            {/* <section className="relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-center">
                 <p className="text-gray-700 text-lg leading-relaxed">
                     Explore the show:{' '}
                     <Link href={route('meet-bruce')} className="text-[#b59100] hover:text-[#ffde59] font-medium underline underline-offset-2 transition-colors">
@@ -60,7 +60,7 @@ export default function Welcome() {
                     </Link>
                     .
                 </p>
-            </section>
+            </section> */}
 
             <RecentVideos />
         </HomeLayout>
