@@ -2,7 +2,7 @@ import HeroVideoBackground from '@/Components/HeroVideoBackground';
 import HeroNav from '@/Components/HeroNav';
 import RecentVideos from '@/Components/RecentVideos';
 import HomeLayout from '@/Layouts/HomeLayout';
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { motion } from 'framer-motion';
 
 export default function About() {
@@ -20,11 +20,18 @@ export default function About() {
                     transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
                 >
                     <motion.div
-                        className="bg-white/95 backdrop-blur rounded-2xl shadow-2xl p-6 sm:p-8 lg:p-10"
+                        className="relative bg-white/95 backdrop-blur rounded-2xl shadow-2xl p-6 sm:p-8 lg:p-10"
                         initial={{ opacity: 0, scale: 0.98 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ duration: 0.5, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
                     >
+                        <Link
+                            href={route('welcome')}
+                            className="absolute top-2 right-2 flex h-10 w-10 items-center justify-center rounded-full text-gray-500 hover:bg-[#ffde5950] border-2 border-[#ffde5970] hover:border-[#ffde59] hover:text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-[#ffde59] focus:ring-offset-2"
+                            aria-label="Close and return to home"
+                        >
+                            <span className="text-2xl font-medium leading-none" aria-hidden="true">×</span>
+                        </Link>
                         <div className="flex flex-col lg:flex-row items-start gap-10 lg:gap-12">
                             {/* Left: title and text */}
                             <div className="flex-1 order-2 lg:order-1">

@@ -3,7 +3,7 @@ import HeroVideoBackground from '@/Components/HeroVideoBackground';
 import HeroNav from '@/Components/HeroNav';
 import RecentVideos from '@/Components/RecentVideos';
 import HomeLayout from '@/Layouts/HomeLayout';
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useState } from 'react';
 
@@ -38,11 +38,18 @@ export default function BrandPartnerships() {
                     transition={{ duration: 0.25, ease: 'easeOut' }}
                 >
                     <motion.div
-                        className="bg-white/95 backdrop-blur rounded-2xl shadow-2xl flex flex-col overflow-hidden max-h-[80vh] min-h-[400px]"
+                        className="relative bg-white/95 backdrop-blur rounded-2xl shadow-2xl flex flex-col overflow-hidden max-h-[80vh] min-h-[400px]"
                         initial={{ opacity: 0, scale: 0.99 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ duration: 0.2, delay: 0.05, ease: 'easeOut' }}
                     >
+                        <Link
+                            href={route('welcome')}
+                            className="absolute top-2 right-2 flex h-10 w-10 items-center justify-center rounded-full text-gray-500 hover:bg-[#ffde5950] border-2 border-[#ffde5970] hover:border-[#ffde59] hover:text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-[#ffde59] focus:ring-offset-2"
+                            aria-label="Close and return to home"
+                        >
+                            <span className="text-2xl font-medium leading-none" aria-hidden="true">×</span>
+                        </Link>
                         {/* Header */}
                         <div className="p-6 sm:p-8 pb-4 shrink-0">
                             <h1 className="text-3xl sm:text-4xl font-bold barlow-condensed-semibold text-gray-900 mb-4">
@@ -186,7 +193,13 @@ export default function BrandPartnerships() {
                                         <p className="text-gray-700 mb-4">
                                             Our podcast is supported by a curated roster of respected personalities who understand the natural health space and communicate product value with authenticity and authority.
                                         </p>
-                                        <GalleryOfPersonalities />
+                                        <div className='w-full flex justify-center'>
+                                            <div className='w-[500px] flex flex-col items-center justify-center bg-white px-4 gap-3 py-8 shadow-lg rounded-xl border border-amber-300 select-none cursor-pointer hover:scale-[1.03] transition-all duration-300 hover:bg-amber-50/30'>
+                                                <h3 className='text-3xl sm:text-4xl font-bold barlow-condensed-semibold text-gray-700 mb-2'>Coming Soon</h3>
+                                                <p className='text-gray-700 mb-4 text-center'>Personality Gallery is on the way. Stay tuned for more information.</p>
+                                            </div>
+                                        </div>
+                                        {/* <GalleryOfPersonalities /> */}
                                     </div>
                                     <div className="pt-4 border-t border-gray-100">
                                         <h3 className="text-base font-semibold text-gray-900 mb-2">Why Brands Partner With Us</h3>

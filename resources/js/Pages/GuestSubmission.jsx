@@ -2,7 +2,7 @@ import HeroVideoBackground from '@/Components/HeroVideoBackground';
 import HeroNav from '@/Components/HeroNav';
 import RecentVideos from '@/Components/RecentVideos';
 import HomeLayout from '@/Layouts/HomeLayout';
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useState } from 'react';
 
@@ -17,6 +17,23 @@ const TABS = [
     { id: 'submission', label: 'Guest Submissions' },
     { id: 'lorrie', label: 'Meet Lorrie' },
 ];
+
+function LorrieImage() {
+    return (
+        <div className="flex-1 w-full max-h-96 overflow-y-hidden rounded-xl max-w-sm lg:max-w-sm order-1 lg:order-2 shrink-0">
+            <div className="aspect-[2/3] rounded-xl overflow-hidden shadow-xl bg-gray-200">
+                <img
+                    src="/assets/images/lorrie.png"
+                    alt="Lorrie Ingram"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                        e.target.src = 'https://placehold.co/600x750/f5f5f5/1a1a2e?text=Lorrie+Ingram';
+                    }}
+                />
+            </div>
+        </div>
+    );
+}
 
 export default function GuestSubmission() {
     const [activeTab, setActiveTab] = useState('submission');
@@ -34,11 +51,18 @@ export default function GuestSubmission() {
                     transition={{ duration: 0.25, ease: 'easeOut' }}
                 >
                     <motion.div
-                        className="bg-white/95 backdrop-blur rounded-2xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh] md:max-h-[80vh] min-h-[400px]"
+                        className="relative bg-white/95 backdrop-blur rounded-2xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh] md:max-h-[80vh] min-h-[400px]"
                         initial={{ opacity: 0, scale: 0.99 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ duration: 0.2, delay: 0.05, ease: 'easeOut' }}
                     >
+                        <Link
+                            href={route('welcome')}
+                            className="absolute top-2 right-2 flex h-10 w-10 items-center justify-center rounded-full text-gray-500 hover:bg-[#ffde5950] border-2 border-[#ffde5970] hover:border-[#ffde59] hover:text-gray-900 transition-colors focus:outline-none focus:ring-2 focus:ring-[#ffde59] focus:ring-offset-2"
+                            aria-label="Close and return to home"
+                        >
+                            <span className="text-2xl font-medium leading-none" aria-hidden="true">×</span>
+                        </Link>
                         {/* Header */}
                         <div className="p-6 sm:p-8 pb-4 shrink-0">
                             <h1 className="text-3xl sm:text-4xl font-bold barlow-condensed-semibold text-gray-900 mb-4">
@@ -75,25 +99,29 @@ export default function GuestSubmission() {
                                         exit="out"
                                         transition={quick}
                                     >
-                                        <div>
-                                            <h2 className="text-lg font-bold barlow-condensed-semibold text-gray-900 mb-3">
-                                                Celebrating the Voices Moving Our Industry Forward
-                                            </h2>
-                                            <p>
-                                                Guest coordination is led by Lorrie Ingram, who works closely with our team to identify meaningful conversations and ensure each episode reflects the depth, expertise, and diversity of the community we serve.
-                                            </p>
-                                            <p className="mt-3">
-                                                Canada's natural health industry is vibrant, dynamic, and continually evolving. Its progress is powered by the people behind it—retailers guiding customers toward better choices, buyers shaping assortments, product specialists educating teams, sales representatives building trusted relationships, and the brand partners, distributors, and brokers bringing innovation to market.
-                                            </p>
-                                            <p className="mt-3">
-                                                At In Conversation with Bruce W. Cole, we believe the future of the industry is shaped by individuals willing to share their knowledge and experience. The podcast was created to spotlight these voices and capture the perspectives helping move natural health forward across Canada.
-                                            </p>
-                                            <p className="mt-3">
-                                                If there is someone you believe the industry would benefit from hearing, we welcome your recommendation. Whether you are proposing a respected leader, an emerging voice, a valued colleague, or even yourself, we are always seeking thoughtful conversations that inform, inspire, and strengthen our ecosystem.
-                                            </p>
-                                            <p className="mt-3">
-                                                To submit a guest idea, please share the individual's name along with a brief note outlining what makes their perspective valuable.
-                                            </p>
+                                        <div className="flex flex-col lg:flex-row items-start gap-10 lg:gap-12">
+                                            <div className="flex-1 order-2 lg:order-1">
+                                                <h2 className="text-lg font-bold barlow-condensed-semibold text-gray-900 mb-3">
+                                                    Celebrating the Voices Moving Our Industry Forward
+                                                </h2>
+                                                <p>
+                                                    Guest coordination is led by Lorrie Ingram, who works closely with our team to identify meaningful conversations and ensure each episode reflects the depth, expertise, and diversity of the community we serve.
+                                                </p>
+                                                <p className="mt-3">
+                                                    Canada's natural health industry is vibrant, dynamic, and continually evolving. Its progress is powered by the people behind it—retailers guiding customers toward better choices, buyers shaping assortments, product specialists educating teams, sales representatives building trusted relationships, and the brand partners, distributors, and brokers bringing innovation to market.
+                                                </p>
+                                                <p className="mt-3">
+                                                    At In Conversation with Bruce W. Cole, we believe the future of the industry is shaped by individuals willing to share their knowledge and experience. The podcast was created to spotlight these voices and capture the perspectives helping move natural health forward across Canada.
+                                                </p>
+                                                <p className="mt-3">
+                                                    If there is someone you believe the industry would benefit from hearing, we welcome your recommendation. Whether you are proposing a respected leader, an emerging voice, a valued colleague, or even yourself, we are always seeking thoughtful conversations that inform, inspire, and strengthen our ecosystem.
+                                                </p>
+                                                <p className="mt-3">
+                                                    To submit a guest idea, please share the individual's name along with a brief note outlining what makes their perspective valuable.
+                                                </p>
+                                            </div>
+                                            {/* Lorrie image on both tabs */}
+                                            <LorrieImage />
                                         </div>
                                     </motion.div>
                                 )}
@@ -120,18 +148,8 @@ export default function GuestSubmission() {
                                                     Over the past 13 years, Lorrie has held Account Management and Senior Account Management roles with leading natural health companies, including Renew Life and Healthology. She is passionate about supporting retailers, educating consumers, and making a meaningful impact across the industry.
                                                 </p>
                                             </div>
-                                            <div className="flex-1 w-full max-h-96 overflow-y-hidden rounded-xl max-w-sm lg:max-w-sm order-1 lg:order-2 shrink-0">
-                                                <div className="aspect-[2/3] rounded-xl overflow-hidden shadow-xl bg-gray-200">
-                                                    <img
-                                                        src="/assets/images/lorrie.png"
-                                                        alt="Lorrie Ingram"
-                                                        className="w-full h-full object-cover"
-                                                        onError={(e) => {
-                                                            e.target.src = 'https://placehold.co/600x750/f5f5f5/1a1a2e?text=Lorrie+Ingram';
-                                                        }}
-                                                    />
-                                                </div>
-                                            </div>
+                                            {/* Lorrie image on both tabs */}
+                                            <LorrieImage />
                                         </div>
                                     </motion.div>
                                 )}
