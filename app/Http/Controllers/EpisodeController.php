@@ -11,7 +11,7 @@ class EpisodeController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Episode::orderByDesc('created_at');
+        $query = Episode::withoutGlobalScope('published')->orderByDesc('created_at');
 
         if ($request->filled('search')) {
             $term = $request->search;

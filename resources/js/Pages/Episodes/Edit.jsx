@@ -82,7 +82,7 @@ export default function Edit({ episode }) {
                         </div>
 
                         <div>
-                            <InputLabel htmlFor="created_at" value="Created date" />
+                            <InputLabel htmlFor="created_at" value="Published date" />
                             <input
                                 id="created_at"
                                 type="date"
@@ -90,6 +90,9 @@ export default function Edit({ episode }) {
                                 onChange={(e) => setData('created_at', e.target.value)}
                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
                             />
+                            <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">
+                                The episode will appear on the site on and after this date.
+                            </p>
                             <InputError message={errors.created_at} className="mt-1" />
                         </div>
 
