@@ -14,7 +14,7 @@ const heroTextVariants = {
     }),
 };
 
-export default function Welcome() {
+export default function Welcome({ videos = [] }) {
     return (
         <HomeLayout>
             <Head title="Welcome" />
@@ -62,7 +62,7 @@ export default function Welcome() {
                 </p>
             </section> */}
 
-            <RecentVideos />
+            <RecentVideos episodes={videos} />
         </HomeLayout>
     );
 }

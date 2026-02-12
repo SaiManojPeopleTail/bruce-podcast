@@ -14,7 +14,7 @@
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
 
         <!-- favicon -->
-        <link rel="icon" href="assets/images/favicon-B.png" type="image/png">
+        <link rel="icon" href="/assets/images/favicon-B.png" type="image/png">
 
         <!-- Scripts -->
         @routes

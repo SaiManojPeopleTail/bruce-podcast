@@ -20,13 +20,13 @@ const itemVariants = {
     },
 };
 
-export default function RecentVideos() {
+export default function RecentVideos({ title = 'EPISODES', episodes = [] }) {
     const { props } = usePage();
     const initialVideos = props.videos || [];
     const initialNextPage = props.nextPage ?? null;
     const initialHasMore = props.hasMore ?? false;
 
-    const [videos, setVideos] = useState(initialVideos);
+    const [videos, setVideos] = useState(() => (Array.isArray(episodes) && episodes.length > 0 ? episodes : initialVideos));
     const [nextPage, setNextPage] = useState(initialNextPage);
     const [hasMore, setHasMore] = useState(initialHasMore);
     const [loading, setLoading] = useState(false);
@@ -63,7 +63,7 @@ export default function RecentVideos() {
                 className="text-4xl md:text-5xl font-bold barlow-condensed-semibold mb-12 w-full text-center"
                 variants={itemVariants}
             >
-                EPISODES
+                {title}
             </motion.h2>
 
             {videos.length === 0 ? (

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 
 const navItems = [
     { name: 'Home', path: '/' },
+    { name: 'Episodes', path: '/all-episodes', other_active_paths: ['/episodes', '/episodes/clips', '/sponsor-videos'] },
     { name: 'Meet Bruce', path: '/meet-bruce' },
     { name: 'Guest Submissions', path: '/guest-submissions' },
     { name: 'Brand Partnerships', path: '/brand-partnerships' },
@@ -21,6 +22,22 @@ const linkClass = `
     border-none
     transition-colors duration-200
 `;
+
+// Helper to check if nav item is current, including other active paths
+function isCurrentItem(item, url) {
+    if (item.other_active_paths && Array.isArray(item.other_active_paths)) {
+        if (
+            item.other_active_paths.some(
+                (path) =>
+                    (path.startsWith('/') && url.startsWith(path))
+                    || (!path.startsWith('/') && url.includes(path))
+            )
+        ) {
+            return true;
+        }
+    }
+    return url === item.path;
+}
 
 export default function HeroNav({ position = 'bottom' }) {
     const { url } = usePage();
@@ -54,7 +71,7 @@ export default function HeroNav({ position = 'bottom' }) {
 
     return (
         <>
-            <div className="fixed top-4 right-4 z-30 hidden md:block bg-black/95 backdrop-blur-sm rounded-full p-2 cursor-pointer px-4 hover:scale-[1.02] transition-all duration-200 shadow-lg text-sm text-gray-300 font-semibold text-[#ffde5a] hover:bg-white hover:shadow-xl hover:text-black cursor-pointer" onClick={() => window.location.href = 'mailto:hello@brucewcole.com'}>
+            <div className="fixed top-4 right-4 z-30 hidden lg:block bg-black/95 backdrop-blur-sm rounded-full p-2 cursor-pointer px-4 hover:scale-[1.02] transition-all duration-200 shadow-lg text-sm text-gray-300 font-semibold text-[#ffde5a] hover:bg-white hover:shadow-xl hover:text-black cursor-pointer" onClick={() => window.location.href = 'mailto:hello@brucewcole.com'}>
                 hello@brucewcole.com
             </div>
             {/* Mobile: floating hamburger top left */}
@@ -106,7 +123,7 @@ export default function HeroNav({ position = 'bottom' }) {
                         >
                             <div className="flex flex-col flex-1">
                                 {navItems.map((item) => {
-                                    const current = url === item.path;
+                                    const current = isCurrentItem(item, url);
                                     return (
                                         <Link
                                             key={item.name}
@@ -153,7 +170,7 @@ export default function HeroNav({ position = 'bottom' }) {
                 `}
             >
                 {navItems.map((item) => {
-                    const current = url === item.path;
+                    const current = isCurrentItem(item, url);
                     return (
                         <div
                             key={item.name}

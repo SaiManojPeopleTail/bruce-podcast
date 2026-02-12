@@ -11,6 +11,30 @@ import * as tus from 'tus-js-client';
 import { Loader2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
+const UPLOAD_STALL_TIMEOUT_MS = 90_000;
+const stepOrder = ['create', 'upload', 'process', 'thumbnail', 'update'];
+const initialSteps = {
+    create: 'pending',
+    upload: 'pending',
+    process: 'pending',
+    thumbnail: 'pending',
+    update: 'pending',
+};
+
+function stepClass(status) {
+    if (status === 'done') return 'text-green-600 dark:text-green-400';
+    if (status === 'failed') return 'text-red-600 dark:text-red-400';
+    if (status === 'in_progress') return 'text-indigo-600 dark:text-indigo-400';
+    return 'text-gray-500 dark:text-slate-400';
+}
+
+function stepLabel(status) {
+    if (status === 'done') return 'Done';
+    if (status === 'failed') return 'Failed';
+    if (status === 'in_progress') return 'In progress';
+    return 'Pending';
+}
+
 function slugify(title) {
     if (!title || typeof title !== 'string') return '';
     return title
@@ -22,28 +46,15 @@ function slugify(title) {
 }
 
 function todayISO() {
-    const d = new Date();
-    return d.toISOString().slice(0, 10);
+    return new Date().toISOString().slice(0, 10);
 }
 
 function wait(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-const UPLOAD_STALL_TIMEOUT_MS = 90_000;
-
-const initialSteps = {
-    create: 'pending',
-    upload: 'pending',
-    process: 'pending',
-    thumbnail: 'pending',
-    update: 'pending',
-};
-
-const stepOrder = ['create', 'upload', 'process', 'thumbnail', 'update'];
-
-export default function Create() {
-    const { data, setData, processing, errors, setError, clearErrors } = useForm({
+export default function Create({ brand }) {
+    const { data, setData, errors, setError, clearErrors } = useForm({
         title: '',
         slug: '',
         short_description: '',
@@ -64,94 +75,74 @@ export default function Create() {
     const [encodeProgress, setEncodeProgress] = useState(0);
     const [statusMessage, setStatusMessage] = useState('Waiting to start...');
     const [steps, setSteps] = useState(initialSteps);
-    const [workflowContext, setWorkflowContext] = useState({
-        episodeId: null,
-        session: null,
-    });
+    const [workflowContext, setWorkflowContext] = useState({ videoId: null, session: null });
 
     const stepItems = useMemo(() => ([
-        { key: 'create', label: 'Create episode entry' },
+        { key: 'create', label: 'Create sponsor video entry' },
         { key: 'upload', label: 'Upload video to Bunny' },
         { key: 'process', label: 'Wait for Bunny processing' },
         { key: 'thumbnail', label: 'Upload thumbnail to Bunny' },
-        { key: 'update', label: 'Update episode with Bunny data' },
+        { key: 'update', label: 'Update sponsor video with Bunny data' },
     ]), []);
 
-    const setStepStatus = (key, value) => {
-        setSteps((prev) => ({ ...prev, [key]: value }));
-    };
+    const setStepStatus = (key, value) => setSteps((prev) => ({ ...prev, [key]: value }));
 
-    const handleTitleChange = (value) => {
-        setData('title', value);
-        setData('slug', slugify(value));
-    };
+    const uploadWithTus = (file, session, title) => new Promise((resolve, reject) => {
+        let settled = false;
+        let lastProgressAt = Date.now();
 
-    const uploadWithTus = (file, session, title) => {
-        return new Promise((resolve, reject) => {
-            let settled = false;
-            let lastProgressAt = Date.now();
+        const fail = (error) => {
+            if (settled) return;
+            settled = true;
+            clearInterval(stallTimer);
+            reject(error);
+        };
 
-            const fail = (error) => {
-                if (settled) return;
-                settled = true;
-                clearInterval(stallTimer);
-                reject(error);
-            };
+        const succeed = () => {
+            if (settled) return;
+            settled = true;
+            clearInterval(stallTimer);
+            resolve(true);
+        };
 
-            const succeed = () => {
-                if (settled) return;
-                settled = true;
-                clearInterval(stallTimer);
-                resolve(true);
-            };
-
-            const upload = new tus.Upload(file, {
-                endpoint: session.upload_endpoint,
-                retryDelays: [0, 1000, 3000, 5000],
-                metadata: {
-                    filename: file.name,
-                    filetype: file.type,
-                    title,
-                },
-                headers: {
-                    AuthorizationSignature: session.signature,
-                    AuthorizationExpire: String(session.expires),
-                    VideoId: session.video_id,
-                    LibraryId: String(session.library_id),
-                },
-                onError: (error) => fail(error),
-                onProgress: (bytesUploaded, bytesTotal) => {
-                    lastProgressAt = Date.now();
-                    const percentage = bytesTotal ? Math.floor((bytesUploaded / bytesTotal) * 100) : 0;
-                    setUploadProgress(percentage);
-                    setStatusMessage(`Uploading video... ${percentage}%`);
-                },
-                onSuccess: () => succeed(),
-            });
-
-            const stallTimer = setInterval(() => {
-                if (Date.now() - lastProgressAt < UPLOAD_STALL_TIMEOUT_MS) return;
-                upload.abort(true).catch(() => {});
-                fail(new Error('Upload stalled. Please retry.'));
-            }, 3000);
-
-            upload
-                .findPreviousUploads()
-                .then((previousUploads) => {
-                    if (previousUploads.length) {
-                        upload.resumeFromPreviousUpload(previousUploads[0]);
-                    }
-                    upload.start();
-                })
-                .catch((error) => fail(error));
+        const upload = new tus.Upload(file, {
+            endpoint: session.upload_endpoint,
+            retryDelays: [0, 1000, 3000, 5000],
+            metadata: { filename: file.name, filetype: file.type, title },
+            headers: {
+                AuthorizationSignature: session.signature,
+                AuthorizationExpire: String(session.expires),
+                VideoId: session.video_id,
+                LibraryId: String(session.library_id),
+            },
+            onError: (error) => fail(error),
+            onProgress: (bytesUploaded, bytesTotal) => {
+                lastProgressAt = Date.now();
+                const percentage = bytesTotal ? Math.floor((bytesUploaded / bytesTotal) * 100) : 0;
+                setUploadProgress(percentage);
+                setStatusMessage(`Uploading video... ${percentage}%`);
+            },
+            onSuccess: () => succeed(),
         });
-    };
+
+        const stallTimer = setInterval(() => {
+            if (Date.now() - lastProgressAt < UPLOAD_STALL_TIMEOUT_MS) return;
+            upload.abort(true).catch(() => {});
+            fail(new Error('Upload stalled. Please retry.'));
+        }, 3000);
+
+        upload.findPreviousUploads()
+            .then((previousUploads) => {
+                if (previousUploads.length) upload.resumeFromPreviousUpload(previousUploads[0]);
+                upload.start();
+            })
+            .catch((error) => fail(error));
+    });
 
     const waitForBunnyProcessing = async (videoId, libraryId) => {
         const maxAttempts = 150;
-
         for (let i = 0; i < maxAttempts; i += 1) {
-            const response = await axios.post(route('episodes.bunny.status'), {
+            const response = await axios.post(route('brands.videos.bunny.status', brand.id), {
                 video_id: videoId,
                 library_id: libraryId,
             });
@@ -164,7 +155,6 @@ export default function Create() {
                 setStatusMessage('Bunny processing complete.');
                 return;
             }
-
             if (state === 'failed') {
                 throw new Error('Bunny processing failed.');
             }
@@ -176,8 +166,8 @@ export default function Create() {
         throw new Error('Timed out waiting for Bunny processing.');
     };
 
-    const runWorkflowFrom = async (startStep, contextSeed = null) => {
-        const context = contextSeed || { ...workflowContext };
+    const runWorkflowFrom = async (startStep, seed = null) => {
+        const context = seed || { ...workflowContext };
         const startIndex = stepOrder.indexOf(startStep);
         if (startIndex === -1) return;
 
@@ -191,25 +181,19 @@ export default function Create() {
                 setWorkflowError('');
 
                 if (currentStep === 'create') {
-                    setStatusMessage('Creating episode entry...');
-                    const createResponse = await axios.post(
-                        route('episodes.store'),
-                        {
-                            title: data.title,
-                            slug: data.slug,
-                            short_description: data.short_description,
-                            long_description: data.long_description,
-                            created_at: data.created_at,
-                        },
-                        { headers: { Accept: 'application/json' } },
-                    );
+                    setStatusMessage('Creating sponsor video entry...');
+                    const createResponse = await axios.post(route('brands.videos.store', brand.id), {
+                        title: data.title,
+                        slug: data.slug,
+                        short_description: data.short_description,
+                        long_description: data.long_description,
+                        created_at: data.created_at,
+                    }, { headers: { Accept: 'application/json' } });
 
-                    const episodeId = createResponse?.data?.episode?.id;
-                    if (!episodeId) {
-                        throw new Error('Episode was created but ID was not returned.');
-                    }
+                    const videoId = createResponse?.data?.video?.id;
+                    if (!videoId) throw new Error('Sponsor video was created but ID was not returned.');
 
-                    context.episodeId = episodeId;
+                    context.videoId = videoId;
                     setWorkflowContext({ ...context });
                     setStepStatus('create', 'done');
                     continue;
@@ -218,13 +202,9 @@ export default function Create() {
                 if (currentStep === 'upload') {
                     setStatusMessage('Initializing video upload...');
                     if (!context.session || context.session.expires < Math.floor(Date.now() / 1000) + 60) {
-                        const initResponse = await axios.post(route('episodes.bunny.init'), {
-                            title: data.title,
-                        });
+                        const initResponse = await axios.post(route('brands.videos.bunny.init', brand.id), { title: data.title });
                         const session = initResponse?.data;
-                        if (!session?.video_id || !session?.library_id) {
-                            throw new Error('Upload initialization failed.');
-                        }
+                        if (!session?.video_id || !session?.library_id) throw new Error('Upload initialization failed.');
                         context.session = session;
                         setWorkflowContext({ ...context });
                     }
@@ -236,7 +216,7 @@ export default function Create() {
 
                 if (currentStep === 'process') {
                     await waitForBunnyProcessing(context.session.video_id, context.session.library_id);
-                    await axios.post(route('episodes.bunny.finalize'), {
+                    await axios.post(route('brands.videos.bunny.finalize', brand.id), {
                         video_id: context.session.video_id,
                         library_id: context.session.library_id,
                     });
@@ -250,39 +230,32 @@ export default function Create() {
                     formData.append('thumbnail', thumbnailFile);
                     formData.append('video_id', context.session.video_id);
                     formData.append('library_id', context.session.library_id);
-
-                    await axios.post(route('episodes.bunny.thumbnail'), formData, {
+                    await axios.post(route('brands.videos.bunny.thumbnail', brand.id), formData, {
                         headers: { 'Content-Type': 'multipart/form-data' },
                     });
-
-                    setWorkflowContext({ ...context });
                     setStepStatus('thumbnail', 'done');
                     continue;
                 }
 
                 if (currentStep === 'update') {
-                    setStatusMessage('Updating episode...');
-                    await axios.patch(
-                        route('episodes.update', context.episodeId),
-                        {
-                            title: data.title,
-                            slug: data.slug,
-                            short_description: data.short_description,
-                            long_description: data.long_description,
-                            created_at: data.created_at,
-                            bunny_video_id: context.session.video_id,
-                            bunny_library_id: context.session.library_id,
-                        },
-                        { headers: { Accept: 'application/json' } },
-                    );
+                    setStatusMessage('Updating sponsor video...');
+                    await axios.patch(route('brands.videos.update', [brand.id, context.videoId]), {
+                        title: data.title,
+                        slug: data.slug,
+                        short_description: data.short_description,
+                        long_description: data.long_description,
+                        created_at: data.created_at,
+                        bunny_video_id: context.session.video_id,
+                        bunny_library_id: context.session.library_id,
+                    }, { headers: { Accept: 'application/json' } });
                     setStepStatus('update', 'done');
                 }
             }
 
-            setStatusMessage('Episode created successfully. Redirecting...');
+            setStatusMessage('Sponsor video created successfully. Redirecting...');
             setWorkflowDone(true);
             await wait(900);
-            window.location.href = route('episodes.index');
+            window.location.href = route('brands.videos.index', brand.id);
         } catch (err) {
             if (err?.response?.status === 422 && err?.response?.data?.errors) {
                 Object.entries(err.response.data.errors).forEach(([key, value]) => {
@@ -303,94 +276,47 @@ export default function Create() {
         e.preventDefault();
         clearErrors();
 
-        if (!data.title?.trim()) {
-            setError('title', 'Title is required.');
-            return;
-        }
+        if (!data.title?.trim()) return setError('title', 'Title is required.');
+        if (!data.created_at) return setError('created_at', 'Published date is required.');
+        if (!data.short_description?.trim()) return setError('short_description', 'Short description is required.');
+        if (!videoFile) return setError('video_file', 'Video file is required.');
+        if (!thumbnailFile) return setError('thumbnail', 'Thumbnail is required.');
 
-        if (!data.created_at) {
-            setError('created_at', 'Published date is required.');
-            return;
-        }
-
-        if (!data.short_description?.trim()) {
-            setError('short_description', 'Short description is required.');
-            return;
-        }
-
-        if (!videoFile) {
-            setError('video', 'Please select a video file.');
-            return;
-        }
-
-        if (!thumbnailFile) {
-            setError('thumbnail', 'Please select a thumbnail image.');
-            return;
-        }
-
-        setShowProcessingModal(true);
+        setSteps(initialSteps);
         setWorkflowError('');
         setWorkflowDone(false);
         setFailedStep('');
         setUploadProgress(0);
         setEncodeProgress(0);
-        setStatusMessage('Creating episode entry...');
-        setSteps(initialSteps);
+        setWorkflowContext({ videoId: null, session: null });
+        setShowProcessingModal(true);
 
-        const freshContext = { episodeId: null, session: null };
-        setWorkflowContext(freshContext);
-        await runWorkflowFrom('create', freshContext);
+        await runWorkflowFrom('create');
     };
 
     const retryFailedStep = async (stepKey) => {
-        setWorkflowDone(false);
         await runWorkflowFrom(stepKey);
     };
 
-    const stepClass = (status) => {
-        if (status === 'done') return 'text-green-600 dark:text-green-400';
-        if (status === 'in_progress') return 'text-indigo-600 dark:text-indigo-400';
-        if (status === 'failed') return 'text-red-600 dark:text-red-400';
-        return 'text-gray-500 dark:text-slate-400';
-    };
-
-    const stepLabel = (status) => {
-        if (status === 'done') return 'Done';
-        if (status === 'in_progress') return 'In progress';
-        if (status === 'failed') return 'Failed';
-        return 'Pending';
-    };
-
     return (
-        <AuthenticatedLayout
-            header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800 dark:text-slate-200">
-                    New episode
-                </h2>
-            }
-        >
-            <Head title="New episode" />
+        <AuthenticatedLayout header={<h2 className="text-xl font-semibold leading-tight text-gray-800 dark:text-slate-200">Add sponsor video</h2>}>
+            <Head title="Add sponsor video" />
 
             <div className="mx-auto w-full max-w-6xl">
-                <form
-                    onSubmit={handleSubmit}
-                    className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-gray-800"
-                >
+                <form onSubmit={handleSubmit} className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-gray-800">
                     <div className="border-b border-gray-200 bg-white px-6 py-5 dark:border-slate-700 dark:bg-gray-800">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Episode Details</h3>
-                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                            Fill metadata, then upload source video and thumbnail.
-                        </p>
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{brand.name} Video Upload</h3>
+                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Save starts upload, processing, thumbnailing and finalize steps.</p>
                     </div>
+
                     <div className="space-y-6 p-6 md:p-8">
                         <div className="grid gap-6 md:grid-cols-2">
                             <div>
-                                <InputLabel htmlFor="video_file" value="Video file *" />
+                                <InputLabel htmlFor="video_file" value="Video file" />
                                 <input
                                     id="video_file"
                                     type="file"
                                     accept="video/*"
-                                    required
                                     onChange={(e) => {
                                         const file = e.target.files?.[0] || null;
                                         setVideoFile(file);
@@ -398,121 +324,68 @@ export default function Create() {
                                     }}
                                     className="mt-1 block w-full text-sm text-gray-700 file:mr-3 file:rounded-md file:border file:border-gray-300 file:bg-white file:px-3 file:py-2 file:text-sm file:font-medium file:text-gray-700 hover:file:bg-gray-50 dark:text-gray-200 dark:file:border-gray-600 dark:file:bg-gray-700 dark:file:text-gray-200"
                                 />
-                                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                                    Video upload starts after you click Save episode.
-                                </p>
-                                {videoPreview && (
-                                    <video
-                                        src={videoPreview}
-                                        controls
-                                        className="mt-3 w-full rounded-lg border border-gray-200 bg-black dark:border-slate-700"
-                                    />
-                                )}
-                                <InputError message={errors.video} className="mt-1" />
+                                {videoPreview && <video src={videoPreview} controls className="mt-3 w-full rounded-lg border border-gray-200 bg-black dark:border-gray-700" />}
+                                <InputError message={errors.video_file} className="mt-2" />
                             </div>
 
                             <div>
-                                <InputLabel htmlFor="thumbnail" value="Thumbnail image *" />
+                                <InputLabel htmlFor="thumbnail" value="Thumbnail image" />
                                 <input
                                     id="thumbnail"
                                     type="file"
                                     accept="image/*"
-                                    required
                                     onChange={(e) => {
                                         const file = e.target.files?.[0] || null;
                                         setThumbnailFile(file);
                                         setThumbnailPreview(file ? URL.createObjectURL(file) : '');
                                     }}
-                                    className="mt-1 block w-full text-sm text-gray-700 file:mr-3 file:rounded-md file:border file:border-gray-300 file:bg-white file:px-3 file:py-2 file:text-sm file:font-medium file:text-gray-700 hover:file:bg-gray-50 dark:text-slate-200 dark:file:border-slate-600 dark:file:bg-slate-700 dark:file:text-slate-200"
+                                    className="mt-1 block w-full text-sm text-gray-700 file:mr-3 file:rounded-md file:border file:border-gray-300 file:bg-white file:px-3 file:py-2 file:text-sm file:font-medium file:text-gray-700 hover:file:bg-gray-50 dark:text-gray-200 dark:file:border-gray-600 dark:file:bg-gray-700 dark:file:text-gray-200"
                                 />
-                                {thumbnailPreview && (
-                                    <img
-                                        src={thumbnailPreview}
-                                        alt="Thumbnail preview"
-                                        className="mt-3 h-auto w-full rounded-lg border border-gray-200 object-cover dark:border-slate-700"
-                                    />
-                                )}
-                                <InputError message={errors.thumbnail} className="mt-1" />
+                                {thumbnailPreview && <img src={thumbnailPreview} alt="Thumbnail preview" className="mt-3 h-auto w-full rounded-lg border border-gray-200 object-cover dark:border-gray-700" />}
+                                <InputError message={errors.thumbnail} className="mt-2" />
                             </div>
                         </div>
 
                         <div>
                             <InputLabel htmlFor="title" value="Title *" />
-                            <TextInput
-                                id="title"
-                                type="text"
-                                required
-                                value={data.title}
-                                onChange={(e) => handleTitleChange(e.target.value)}
-                                className="mt-1 block w-full"
-                                placeholder="Episode title"
-                                autoFocus
-                            />
-                            <InputError message={errors.title} className="mt-1" />
+                            <TextInput id="title" value={data.title} onChange={(e) => { setData('title', e.target.value); setData('slug', slugify(e.target.value)); }} className="mt-1 block w-full" />
+                            <InputError message={errors.title} className="mt-2" />
                         </div>
 
                         <div>
-                            <InputLabel value="Slug (generated from title, read-only)" />
-                            <input
-                                type="text"
-                                readOnly
-                                value={data.slug}
-                                className="mt-1 block w-full rounded-md border border-gray-300 bg-gray-100 py-2 text-gray-600 shadow-sm dark:border-slate-600 dark:bg-slate-700 dark:text-slate-400"
-                                aria-label="Slug"
-                            />
-                            <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">
-                                Special characters are removed; spaces become hyphens. This value is used in the episode URL.
-                            </p>
-                            <InputError message={errors.slug} className="mt-1" />
+                            <InputLabel htmlFor="slug" value="Slug *" />
+                            <TextInput id="slug" value={data.slug} onChange={(e) => setData('slug', slugify(e.target.value))} className="mt-1 block w-full" />
+                            <InputError message={errors.slug} className="mt-2" />
                         </div>
 
                         <div>
                             <InputLabel htmlFor="created_at" value="Published date *" />
-                            <input
-                                id="created_at"
-                                type="date"
-                                required
-                                value={data.created_at}
-                                onChange={(e) => setData('created_at', e.target.value)}
-                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
-                            />
-                            <InputError message={errors.created_at} className="mt-1" />
+                            <TextInput id="created_at" type="date" value={data.created_at} onChange={(e) => setData('created_at', e.target.value)} className="mt-1 block w-full" />
+                            <InputError message={errors.created_at} className="mt-2" />
                         </div>
 
                         <div>
                             <InputLabel htmlFor="short_description" value="Short description *" />
                             <textarea
                                 id="short_description"
-                                required
+                                rows={4}
                                 value={data.short_description}
                                 onChange={(e) => setData('short_description', e.target.value)}
-                                rows={2}
                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
-                                placeholder="Brief description for cards and lists"
                             />
-                            <InputError message={errors.short_description} className="mt-1" />
+                            <InputError message={errors.short_description} className="mt-2" />
                         </div>
 
                         <div>
-                            <InputLabel htmlFor="long_description" value="Long description" />
-                            <div className="mt-1">
-                                <RichTextEditor
-                                    id="long_description"
-                                    value={data.long_description}
-                                    onChange={(html) => setData('long_description', html)}
-                                    placeholder="Full description for the episode page"
-                                />
+                            <InputLabel value="Long description" />
+                            <div className="mt-1 rounded-md border border-gray-300 dark:border-slate-600">
+                                <RichTextEditor value={data.long_description} onChange={(value) => setData('long_description', value)} />
                             </div>
-                            <InputError message={errors.long_description} className="mt-1" />
+                            <InputError message={errors.long_description} className="mt-2" />
                         </div>
 
-                        <div className="flex items-center gap-4">
-                            <PrimaryButton
-                                type="submit"
-                                disabled={processing || (showProcessingModal && !workflowDone && !workflowError)}
-                            >
-                                Save episode
-                            </PrimaryButton>
+                        <div className="flex justify-end">
+                            <PrimaryButton type="submit">Save video</PrimaryButton>
                         </div>
                     </div>
                 </form>
@@ -520,7 +393,7 @@ export default function Create() {
 
             <Modal show={showProcessingModal} onClose={() => {}} closeable={false} maxWidth="lg">
                 <div className="p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Processing Episode</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Processing Sponsor Video</h3>
                     <p className="mt-2 text-sm text-gray-600 dark:text-slate-400">{statusMessage}</p>
 
                     <div className="mt-4">
@@ -576,7 +449,7 @@ export default function Create() {
 
                     {workflowDone && (
                         <div className="mt-4 rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400">
-                            Episode created successfully.
+                            Sponsor video created successfully.
                         </div>
                     )}
 

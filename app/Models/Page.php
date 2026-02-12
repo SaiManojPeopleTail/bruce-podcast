@@ -14,10 +14,15 @@ class Page extends Model
         'og_image',
     ];
 
-    /** Route path for display (home = /, others = /slug). */
+    /** Route path for display. */
     public static function routeForSlug(string $slug): string
     {
-        return $slug === 'home' ? '/' : '/' . $slug;
+        return match ($slug) {
+            'home' => '/',
+            'all-episodes' => '/all-episodes',
+            'clips' => '/episodes/clips',
+            default => '/' . $slug,
+        };
     }
 
     /** Display name for slug. */
@@ -28,6 +33,10 @@ class Page extends Model
             'about' => 'Meet Bruce',
             'brand-partnerships' => 'Brand Partnerships',
             'guest-submissions' => 'Guest Submission',
+            'all-episodes' => 'All Episodes',
+            'episodes' => 'Episodes',
+            'clips' => 'Clips',
+            'sponsor-videos' => 'Sponsor Videos',
             default => $slug,
         };
     }

@@ -27,6 +27,7 @@
         "framer-motion": "^12.31.0",
         "lucide-react": "^0.563.0",
         "react-quill": "^2.0.0",
-        "react-tooltip": "^5.30.0"
+        "react-tooltip": "^5.30.0",
+        "tus-js-client": "^4.2.0"
     }
 }

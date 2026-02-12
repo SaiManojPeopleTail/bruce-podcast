@@ -1,3 +1,4 @@
+import ApplicationLogo from '@/Components/ApplicationLogo';
 import Dropdown from '@/Components/Dropdown';
 import { Link, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
@@ -64,7 +65,8 @@ export default function AuthenticatedLayout({ header, children }) {
                 } transition-transform duration-200 ease-in-out`}
             >
                 <div className="flex h-full flex-col">
-                    <div className="flex h-16 shrink-0 items-center justify-end border-b border-gray-200 px-4 dark:border-slate-700">
+                    <div className={`flex h-16 shrink-0 items-center border-b border-gray-200 px-4 dark:border-slate-700 ${window.innerWidth < 1024 ? 'justify-between' : 'justify-center'}`}>
+                        <ApplicationLogo fontSize={window.innerWidth < 1024 ? '32px' : '40px'} />
                         <button
                             type="button"
                             onClick={() => setSidebarOpen(false)}
@@ -89,6 +91,12 @@ export default function AuthenticatedLayout({ header, children }) {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                             </svg>
                             Episodes
+                        </NavItem>
+                        <NavItem href={route('brands.index')} active={route().current('brands.*')}>
+                            <svg className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h18M5 7v10a2 2 0 002 2h10a2 2 0 002-2V7M9 7V5a3 3 0 016 0v2" />
+                            </svg>
+                            Brands
                         </NavItem>
                         {user.id < 3 && (
                             <>

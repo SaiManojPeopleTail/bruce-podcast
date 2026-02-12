@@ -15,36 +15,36 @@ function formatDatePosted(createdAt) {
     });
 }
 
-export default function Episode({ episode }) {
-    const datePosted = formatDatePosted(episode?.created_at);
+export default function Clip({ video }) {
+    const datePosted = formatDatePosted(video?.created_at);
     const [copied, setCopied] = useState(false);
     const copyTimeoutRef = useRef(null);
 
-    const episodeUrl = typeof window !== 'undefined' ? window.location.href : '';
-    const embedUrl = episode?.bunny_library_id && episode?.bunny_video_id
-        ? `https://iframe.mediadelivery.net/embed/${episode.bunny_library_id}/${episode.bunny_video_id}`
+    const videoUrl = typeof window !== 'undefined' ? window.location.href : '';
+    const embedUrl = video?.bunny_library_id && video?.bunny_video_id
+        ? `https://iframe.mediadelivery.net/embed/${video.bunny_library_id}/${video.bunny_video_id}`
         : null;
 
     const handleShare = useCallback(async () => {
         if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
         try {
             if (navigator.share) {
-                await navigator.share({ url: episodeUrl, title: episode?.title ?? 'Episode' });
+                await navigator.share({ url: videoUrl, title: video?.title ?? 'Clip' });
             } else {
-                await navigator.clipboard.writeText(episodeUrl);
+                await navigator.clipboard.writeText(videoUrl);
             }
             setCopied(true);
             copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
         } catch {
             try {
-                await navigator.clipboard.writeText(episodeUrl);
+                await navigator.clipboard.writeText(videoUrl);
                 setCopied(true);
                 copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
             } catch {
                 setCopied(false);
             }
         }
-    }, [episodeUrl, episode?.title]);
+    }, [videoUrl, video?.title]);
 
     const handleBack = useCallback(() => {
         if (typeof window === 'undefined') {
@@ -75,7 +75,7 @@ export default function Episode({ episode }) {
 
     return (
         <HomeLayout>
-            <Head title={episode?.title ?? 'Episode'} />
+            <Head title={video?.title ?? 'Clip'} />
             <section className="relative min-h-screen w-full max-w-7xl mx-auto flex flex-col px-4 sm:px-6 lg:px-8 py-20">
                 <div className="flex items-center justify-start mb-1">
                     <button
@@ -91,13 +91,29 @@ export default function Episode({ episode }) {
                     <div className="w-full h-auto rounded-3xl my-6 overflow-hidden bg-transparent" style={{
                         boxShadow: '0 0 15px 1px rgba(255, 222, 90, 0.5)',
                     }}>
-                        <iframe
-                            src={embedUrl}
-                            title={episode?.title || 'Episode video'}
-                            className="w-full aspect-video rounded-2xl bg-[#ffde59]"
-                            allow="accelerometer; gyroscope; encrypted-media; picture-in-picture;"
-                            allowFullScreen
-                        />
+                        <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-[#ffde59]">
+                            {video?.thumbnail_url && (
+                                <div
+                                    className="absolute inset-0 w-full h-full bg-cover bg-center z-0 blur-[10px] brightness-110 transition-opacity duration-200"
+                                    style={{
+                                        backgroundImage: `url(${video.thumbnail_url})`,
+                                    }}
+                                    aria-hidden
+                                />
+                            )}
+                            <iframe
+                                src={embedUrl}
+                                title={video?.title || 'Clip'}
+                                className="w-full h-full aspect-video rounded-2xl relative z-10 bg-transparent"
+                                allow="accelerometer; gyroscope; encrypted-media; picture-in-picture;"
+                                allowFullScreen
+                                style={{
+                                    background: video?.thumbnail_url
+                                        ? 'transparent'
+                                        : '#ffde59',
+                                }}
+                            />
+                        </div>
                     </div>
                 ) : (
                     <div className="w-full h-64 rounded-xl border border-gray-200 my-6 flex items-center justify-center text-gray-500">
@@ -105,17 +121,16 @@ export default function Episode({ episode }) {
                     </div>
                 )}
 
-                {/* Title row: title left, share icon right */}
                 <div className="flex items-start justify-between gap-4 mb-4 mx-1">
                     <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 min-w-0 flex-1">
-                        {episode?.title}
+                        {video?.title}
                     </h1>
                     <div className="relative shrink-0 pt-1">
                         <button
                             type="button"
                             onClick={handleShare}
                             className="flex items-center justify-center w-10 h-10 rounded-lg bg-gray-100 hover:bg-gray-200 border border-gray-200 text-gray-700 hover:text-[#b59100] focus:outline-none focus:ring-2 focus:ring-[#ffde59]/50 focus:border-[#ffde59]/40 transition-colors"
-                            aria-label="Share episode"
+                            aria-label="Share video"
                         >
                             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                                 <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z" />
@@ -130,7 +145,6 @@ export default function Episode({ episode }) {
                     </div>
                 </div>
 
-                {/* Date Posted and Description below title */}
                 {datePosted && (
                     <p className="text-sm text-gray-500 plus-jakarta-sans-700 mb-4 mx-1">
                         Date Posted: {datePosted}
@@ -139,14 +153,12 @@ export default function Episode({ episode }) {
                 <div
                     className="prose prose-lg text-gray-700 max-w-none mx-1 prose-p:leading-relaxed long-description"
                     dangerouslySetInnerHTML={{
-                        __html: episode?.long_description
-                            ? episode.long_description
-                            : (episode?.short_description ? `<p>${String(episode.short_description).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>` : ''),
+                        __html: video?.long_description
+                            ? video.long_description
+                            : (video?.short_description ? `<p>${String(video.short_description).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>` : ''),
                     }}
                 />
             </section>
-
-            {/* Nav at top on episode page (same as home when scrolled) */}
             <HeroNav position="top" />
         </HomeLayout>
     );

@@ -22,7 +22,7 @@ const TABS = [
     { id: 'emerging', label: 'Emerging Brands' },
 ];
 
-export default function BrandPartnerships() {
+export default function BrandPartnerships({ brands = [] }) {
     const [activeTab, setActiveTab] = useState('overview');
 
     return (
@@ -288,6 +288,11 @@ export default function BrandPartnerships() {
                             animate={{ opacity: 1 }}
                             transition={{ duration: 0.25, delay: 0.15 }}
                         >
+                            {brands.length > 0 && (
+                                <p className="mb-2 text-xs text-gray-500">
+                                    Active partner brands: {brands.length}
+                                </p>
+                            )}
                             <p className="text-sm font-semibold text-gray-900 mb-1">Let's Start the Conversation</p>
                             <p className="text-sm text-gray-600 mb-1">Contact:&nbsp;&nbsp;
                             <a

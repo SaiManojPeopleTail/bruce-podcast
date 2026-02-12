@@ -8,7 +8,7 @@ use Inertia\Inertia;
 
 class SiteSettingsController extends Controller
 {
-    protected const PAGE_SLUGS = ['home', 'about', 'brand-partnerships', 'guest-submissions'];
+    protected const PAGE_SLUGS = ['home', 'about', 'brand-partnerships', 'guest-submissions', 'all-episodes', 'episodes', 'clips', 'sponsor-videos'];
 
     protected function ensureAdmin(): void
     {

@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Clip;
 use App\Models\Episode;
+use App\Models\SponsorVideo;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Route;
 
 class SitemapController extends Controller
 {
@@ -23,7 +24,13 @@ class SitemapController extends Controller
             'Allow: /meet-bruce',
             'Allow: /brand-partnerships',
             'Allow: /guest-submissions',
+            'Allow: /all-episodes',
+            'Allow: /episodes',
+            'Allow: /episodes/clips',
+            'Allow: /sponsor-videos',
             'Allow: /episode/',
+            'Allow: /episodes/clip/',
+            'Allow: /sponsor-video/',
             'Disallow: /admin',
             'Disallow: /login',
             'Disallow: /forgot-password',
@@ -62,6 +69,10 @@ class SitemapController extends Controller
             ['loc' => $base . '/meet-bruce', 'priority' => '0.9', 'changefreq' => 'monthly'],
             ['loc' => $base . '/brand-partnerships', 'priority' => '0.9', 'changefreq' => 'monthly'],
             ['loc' => $base . '/guest-submissions', 'priority' => '0.9', 'changefreq' => 'monthly'],
+            ['loc' => $base . '/all-episodes', 'priority' => '0.9', 'changefreq' => 'weekly'],
+            ['loc' => $base . '/episodes', 'priority' => '0.9', 'changefreq' => 'weekly'],
+            ['loc' => $base . '/episodes/clips', 'priority' => '0.9', 'changefreq' => 'weekly'],
+            ['loc' => $base . '/sponsor-videos', 'priority' => '0.9', 'changefreq' => 'weekly'],
         ];
 
         foreach ($static as $entry) {
@@ -74,6 +85,30 @@ class SitemapController extends Controller
             $lastmod = ($episode->updated_at ?? $episode->created_at)?->toW3cString();
             $urls[] = $this->urlNode(
                 $base . '/episode/' . $episode->slug,
+                $lastmod,
+                '0.8',
+                'weekly'
+            );
+        }
+
+        // Clips
+        $clips = Clip::orderByDesc('created_at')->get(['slug', 'updated_at', 'created_at']);
+        foreach ($clips as $clip) {
+            $lastmod = ($clip->updated_at ?? $clip->created_at)?->toW3cString();
+            $urls[] = $this->urlNode(
+                $base . '/episodes/clip/' . $clip->slug,
+                $lastmod,
+                '0.8',
+                'weekly'
+            );
+        }
+
+        // Sponsor videos
+        $sponsorVideos = SponsorVideo::orderByDesc('created_at')->get(['slug', 'updated_at', 'created_at']);
+        foreach ($sponsorVideos as $video) {
+            $lastmod = ($video->updated_at ?? $video->created_at)?->toW3cString();
+            $urls[] = $this->urlNode(
+                $base . '/sponsor-video/' . $video->slug,
                 $lastmod,
                 '0.8',
                 'weekly'

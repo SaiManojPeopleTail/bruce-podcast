@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Meta;
+use App\Models\Brand;
 use App\Models\Episode;
 use App\Models\Page;
 use Illuminate\Http\Request;
@@ -12,7 +13,7 @@ class WelcomeController extends Controller
 {
     const VIDEOS_PER_PAGE = 10;
 
-    /** Default OG image for all public pages except episode (episode uses YouTube thumbnail). */
+    /** Default OG image for all public pages except episode (episode uses the episode thumbnail when available). */
     protected static function defaultOgImage(): string
     {
         return asset('assets/images/pod-cover.png');
@@ -20,6 +21,7 @@ class WelcomeController extends Controller
 
     /**
      * YouTube thumbnail URL from video URL, or null if not a YouTube URL.
+     * Kept for legacy episodes that still reference YouTube.
      */
     protected function youtubeThumbnailUrl(?string $videoUrl): ?string
     {
@@ -80,31 +82,6 @@ class WelcomeController extends Controller
         return Episode::orderByDesc('created_at')->get();
     }
 
-    public function episode(string $slug)
-    {
-        $episode = Episode::where('slug', $slug)->first();
-
-        if (!$episode) {
-            abort(404);
-        }
-
-        $canonical = url()->current();
-        Meta::addMeta('title', $episode->title);
-        Meta::addMeta('description', $episode->short_description ?: $episode->long_description);
-        Meta::addMeta('og:title', $episode->title);
-        Meta::addMeta('og:description', $episode->short_description ?: $episode->long_description);
-        Meta::addMeta('og:url', $canonical);
-        Meta::setCanonical($canonical);
-        Meta::addMeta('og:type', 'website');
-        $ytThumb = $this->youtubeThumbnailUrl($episode->video_url);
-        if ($ytThumb) {
-            Meta::addMeta('og:image', $ytThumb);
-        }
-
-        return Inertia::render('Episode', [
-            'episode' => $episode,
-        ]);
-    }
 
     public function index()
     {
@@ -149,6 +126,12 @@ class WelcomeController extends Controller
 
         return Inertia::render('BrandPartnerships', [
             'videos' => $this->getVideosForPages(),
+            'brands' => Brand::query()
+                ->with(['sponsorVideos' => function ($q) {
+                    $q->orderByDesc('created_at');
+                }])
+                ->orderByDesc('created_at')
+                ->get(),
         ]);
     }
 

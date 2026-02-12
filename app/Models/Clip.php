@@ -4,13 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
-class Episode extends Model
+class Clip extends Model
 {
     protected $fillable = [
+        'episode_id',
         'title',
         'slug',
         'short_description',
@@ -47,6 +48,11 @@ class Episode extends Model
             ->firstOrFail();
     }
 
+    public function episode(): BelongsTo
+    {
+        return $this->belongsTo(Episode::class);
+    }
+
     public function getThumbnailUrlAttribute($value): ?string
     {
         if (!$this->bunny_video_id || !$this->bunny_library_id) {
@@ -66,11 +72,6 @@ class Episode extends Model
         return "https://{$cdnHost}/{$this->bunny_video_id}/{$thumbnailFileName}";
     }
 
-    public function clips(): HasMany
-    {
-        return $this->hasMany(Clip::class)->orderByDesc('created_at');
-    }
-
     protected function resolveBunnyThumbnailFileName(): ?string
     {
         $apiKey = config('services.bunny.api_key');
@@ -78,7 +79,7 @@ class Episode extends Model
             return null;
         }
 
-        $cacheKey = "episodes:bunny-thumb-file:{$this->bunny_library_id}:{$this->bunny_video_id}";
+        $cacheKey = "clips:bunny-thumb-file:{$this->bunny_library_id}:{$this->bunny_video_id}";
 
         return Cache::remember($cacheKey, now()->addMinutes(30), function () use ($apiKey) {
             $response = Http::withHeaders([

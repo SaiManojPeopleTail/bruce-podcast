@@ -2,18 +2,18 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Episode;
+use App\Models\Brand;
+use App\Models\SponsorVideo;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
-class EpisodeController extends Controller
+class SponsorVideoController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, Brand $brand)
     {
-        $query = Episode::withoutGlobalScope('published')->orderByDesc('created_at');
+        $query = $brand->sponsorVideos()->withoutGlobalScope('published');
 
         if ($request->filled('search')) {
             $term = $request->search;
@@ -24,24 +24,25 @@ class EpisodeController extends Controller
             });
         }
 
-        $episodes = $query->paginate(15)->withQueryString();
-
-        return Inertia::render('Episodes/Index', [
-            'episodes' => $episodes,
+        return Inertia::render('SponsorVideos/Index', [
+            'brand' => $brand,
+            'videos' => $query->orderByDesc('created_at')->paginate(15)->withQueryString(),
             'filters' => $request->only('search'),
         ]);
     }
 
-    public function create()
+    public function create(Brand $brand)
     {
-        return Inertia::render('Episodes/Create');
+        return Inertia::render('SponsorVideos/Create', [
+            'brand' => $brand,
+        ]);
     }
 
-    public function store(Request $request)
+    public function store(Request $request, Brand $brand)
     {
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
-            'slug' => ['required', 'string', 'max:255', 'unique:episodes,slug', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/'],
+            'slug' => ['required', 'string', 'max:255', 'unique:sponsor_videos,slug', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/'],
             'short_description' => ['required', 'string'],
             'long_description' => ['nullable', 'string'],
             'bunny_video_id' => ['nullable', 'string', 'max:100'],
@@ -51,33 +52,37 @@ class EpisodeController extends Controller
         ]);
 
         $validated['status'] = (bool) ($validated['status'] ?? false);
+        $validated['brand_id'] = $brand->id;
 
-        $episode = Episode::create($validated);
-
-        Cache::forget(SitemapController::SITEMAP_CACHE_KEY);
+        $video = SponsorVideo::create($validated);
 
         if ($request->expectsJson()) {
             return response()->json([
-                'message' => 'Episode created.',
-                'episode' => $episode,
+                'message' => 'Sponsor video created.',
+                'video' => $video,
             ], 201);
         }
 
-        return redirect()->route('episodes.index')->with('success', 'Episode created.');
+        return redirect()->route('brands.videos.index', $brand)->with('success', 'Sponsor video created.');
     }
 
-    public function edit(Episode $episode)
+    public function edit(Brand $brand, SponsorVideo $video)
     {
-        return Inertia::render('Episodes/Edit', [
-            'episode' => $episode,
+        $this->ensureOwnership($brand, $video);
+
+        return Inertia::render('SponsorVideos/Edit', [
+            'brand' => $brand,
+            'video' => $video,
         ]);
     }
 
-    public function update(Request $request, Episode $episode)
+    public function update(Request $request, Brand $brand, SponsorVideo $video)
     {
+        $this->ensureOwnership($brand, $video);
+
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
-            'slug' => ['required', 'string', 'max:255', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', 'unique:episodes,slug,' . $episode->id],
+            'slug' => ['required', 'string', 'max:255', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', 'unique:sponsor_videos,slug,' . $video->id],
             'short_description' => ['required', 'string'],
             'long_description' => ['nullable', 'string'],
             'bunny_video_id' => ['sometimes', 'nullable', 'string', 'max:100'],
@@ -94,21 +99,139 @@ class EpisodeController extends Controller
             unset($validated['bunny_library_id']);
         }
 
-        $episode->update($validated);
-
-        Cache::forget(SitemapController::SITEMAP_CACHE_KEY);
+        $video->update($validated);
 
         if ($request->expectsJson()) {
             return response()->json([
-                'message' => 'Episode updated.',
-                'episode' => $episode->fresh(),
+                'message' => 'Sponsor video updated.',
+                'video' => $video->fresh(),
             ]);
         }
 
-        return redirect()->route('episodes.index')->with('success', 'Episode updated.');
+        return redirect()->route('brands.videos.index', $brand)->with('success', 'Sponsor video updated.');
     }
 
-    public function bunnyVideoStatus(Request $request)
+    public function destroy(Brand $brand, SponsorVideo $video)
+    {
+        $this->ensureOwnership($brand, $video);
+
+        $apiKey = config('services.bunny.api_key');
+
+        if ($video->bunny_video_id) {
+            if (!$apiKey) {
+                return redirect()->route('brands.videos.index', $brand)->with('error', 'Bunny API key missing. Cannot delete remote video.');
+            }
+
+            $libraryCandidates = array_values(array_unique(array_filter([
+                trim((string) $video->bunny_library_id),
+                trim((string) config('services.bunny.library_id')),
+            ])));
+
+            if (empty($libraryCandidates)) {
+                return redirect()->route('brands.videos.index', $brand)->with('error', 'Bunny library id missing. Cannot delete remote video.');
+            }
+
+            $deletedFromBunny = false;
+            $attempts = [];
+
+            foreach ($libraryCandidates as $libraryId) {
+                $response = Http::withHeaders([
+                    'AccessKey' => $apiKey,
+                ])->delete("https://video.bunnycdn.com/library/{$libraryId}/videos/{$video->bunny_video_id}");
+
+                $attempts[] = [
+                    'library_id' => $libraryId,
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ];
+
+                if ($response->successful()) {
+                    $deletedFromBunny = true;
+                    break;
+                }
+            }
+
+            if (!$deletedFromBunny) {
+                Log::warning('Bunny delete failed for sponsor video', [
+                    'brand_id' => $brand->id,
+                    'video_id' => $video->bunny_video_id,
+                    'attempts' => $attempts,
+                ]);
+                return redirect()->route('brands.videos.index', $brand)->with('error', 'Failed to delete video from Bunny. Local record was not deleted.');
+            }
+        }
+
+        $video->delete();
+
+        return redirect()->route('brands.videos.index', $brand)->with('success', 'Sponsor video deleted.');
+    }
+
+    public function toggleStatus(Brand $brand, SponsorVideo $video)
+    {
+        $this->ensureOwnership($brand, $video);
+
+        $video->update([
+            'status' => !$video->status,
+        ]);
+
+        return redirect()->route('brands.videos.index', $brand)->with('success', 'Sponsor video status updated.');
+    }
+
+    public function bunnyUploadInit(Request $request, Brand $brand)
+    {
+        $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+        ]);
+
+        $apiKey = config('services.bunny.api_key');
+        $libraryId = config('services.bunny.library_id');
+
+        if (!$apiKey || !$libraryId) {
+            return response()->json([
+                'error' => 'Bunny configuration missing. Set BUNNY_API_KEY and BUNNY_LIBRARY_ID.',
+            ], 422);
+        }
+
+        $response = Http::withHeaders([
+            'AccessKey' => $apiKey,
+            'Content-Type' => 'application/json',
+        ])->post("https://video.bunnycdn.com/library/{$libraryId}/videos", [
+            'title' => $request->title,
+        ]);
+
+        if (!$response->successful()) {
+            Log::warning('Bunny init failed for sponsor video', [
+                'brand_id' => $brand->id,
+                'library_id' => $libraryId,
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+            return response()->json([
+                'error' => 'Failed to create Bunny video.',
+                'bunny_status' => $response->status(),
+                'bunny_response' => $response->json() ?: $response->body(),
+            ], 502);
+        }
+
+        $videoId = $response->json('guid') ?? $response->json('videoId') ?? $response->json('id');
+
+        if (!$videoId) {
+            return response()->json(['error' => 'Bunny did not return a video id.'], 502);
+        }
+
+        $expires = now()->addHours(6)->timestamp;
+        $signature = hash('sha256', $libraryId . $apiKey . $expires . $videoId);
+
+        return response()->json([
+            'video_id' => $videoId,
+            'library_id' => (string) $libraryId,
+            'expires' => $expires,
+            'signature' => $signature,
+            'upload_endpoint' => 'https://video.bunnycdn.com/tusupload',
+        ]);
+    }
+
+    public function bunnyVideoStatus(Request $request, Brand $brand)
     {
         $validated = $request->validate([
             'video_id' => ['required', 'string'],
@@ -140,9 +263,9 @@ class EpisodeController extends Controller
             ], 502);
         }
 
-        $video = $response->json();
-        $status = (int) ($video['status'] ?? 0);
-        $encodeProgress = (int) ($video['encodeProgress'] ?? 0);
+        $bunnyVideo = $response->json();
+        $status = (int) ($bunnyVideo['status'] ?? 0);
+        $encodeProgress = (int) ($bunnyVideo['encodeProgress'] ?? 0);
 
         $state = 'processing';
         if ($status === 4 || $encodeProgress >= 100) {
@@ -157,177 +280,11 @@ class EpisodeController extends Controller
             'state' => $state,
             'status' => $status,
             'encode_progress' => $encodeProgress,
-            'video' => $video,
+            'video' => $bunnyVideo,
         ]);
     }
 
-    public function destroy(Episode $episode)
-    {
-        $apiKey = config('services.bunny.api_key');
-        $videoId = $episode->bunny_video_id;
-
-        $clips = $episode->clips()->withoutGlobalScope('published')->get();
-        foreach ($clips as $clip) {
-            if (!$clip->bunny_video_id) {
-                continue;
-            }
-
-            if (!$apiKey) {
-                return redirect()->route('episodes.index')->with('error', 'Bunny API key missing. Cannot delete remote clip videos.');
-            }
-
-            $libraryCandidates = array_values(array_unique(array_filter([
-                trim((string) $clip->bunny_library_id),
-                trim((string) config('services.bunny.library_id')),
-            ])));
-
-            if (empty($libraryCandidates)) {
-                return redirect()->route('episodes.index')->with('error', 'Bunny library id missing. Cannot delete remote clip videos.');
-            }
-
-            $deletedFromBunny = false;
-            $attempts = [];
-
-            foreach ($libraryCandidates as $libraryId) {
-                $response = Http::withHeaders([
-                    'AccessKey' => $apiKey,
-                ])->delete("https://video.bunnycdn.com/library/{$libraryId}/videos/{$clip->bunny_video_id}");
-
-                $attempts[] = [
-                    'library_id' => $libraryId,
-                    'status' => $response->status(),
-                    'body' => $response->body(),
-                ];
-
-                if ($response->successful()) {
-                    $deletedFromBunny = true;
-                    break;
-                }
-            }
-
-            if (!$deletedFromBunny) {
-                Log::warning('Bunny delete failed for episode clip', [
-                    'episode_id' => $episode->id,
-                    'clip_video_id' => $clip->bunny_video_id,
-                    'attempts' => $attempts,
-                ]);
-                return redirect()->route('episodes.index')->with('error', 'Failed to delete one or more clip videos from Bunny. Episode was not deleted.');
-            }
-        }
-
-        if ($videoId) {
-            if (!$apiKey) {
-                return redirect()->route('episodes.index')->with('error', 'Bunny API key missing. Cannot delete remote video.');
-            }
-
-            $libraryCandidates = array_values(array_unique(array_filter([
-                trim((string) $episode->bunny_library_id),
-                trim((string) config('services.bunny.library_id')),
-            ])));
-
-            if (empty($libraryCandidates)) {
-                return redirect()->route('episodes.index')->with('error', 'Bunny library id missing. Cannot delete remote video.');
-            }
-
-            $deletedFromBunny = false;
-            $attempts = [];
-
-            foreach ($libraryCandidates as $libraryId) {
-                $response = Http::withHeaders([
-                    'AccessKey' => $apiKey,
-                ])->delete("https://video.bunnycdn.com/library/{$libraryId}/videos/{$videoId}");
-
-                $attempts[] = [
-                    'library_id' => $libraryId,
-                    'status' => $response->status(),
-                    'body' => $response->body(),
-                ];
-
-                if ($response->successful()) {
-                    $deletedFromBunny = true;
-                    break;
-                }
-            }
-
-            if (!$deletedFromBunny) {
-                Log::warning('Bunny delete failed for all candidate libraries', [
-                    'video_id' => $videoId,
-                    'attempts' => $attempts,
-                ]);
-                return redirect()->route('episodes.index')->with('error', 'Failed to delete video from Bunny. Local episode was not deleted.');
-            }
-        }
-
-        $episode->delete();
-        Cache::forget(SitemapController::SITEMAP_CACHE_KEY);
-        return redirect()->route('episodes.index')->with('success', 'Episode deleted.');
-    }
-
-    public function toggleStatus(Episode $episode)
-    {
-        $episode->update([
-            'status' => !$episode->status,
-        ]);
-
-        Cache::forget(SitemapController::SITEMAP_CACHE_KEY);
-
-        return redirect()->route('episodes.index')->with('success', 'Episode status updated.');
-    }
-
-    public function bunnyUploadInit(Request $request)
-    {
-        $validated = $request->validate([
-            'title' => ['required', 'string', 'max:255'],
-        ]);
-
-        $apiKey = config('services.bunny.api_key');
-        $libraryId = config('services.bunny.library_id');
-
-        if (!$apiKey || !$libraryId) {
-            return response()->json([
-                'error' => 'Bunny configuration missing. Set BUNNY_API_KEY and BUNNY_LIBRARY_ID.',
-            ], 422);
-        }
-
-        $response = Http::withHeaders([
-            'AccessKey' => $apiKey,
-            'Content-Type' => 'application/json',
-        ])->post("https://video.bunnycdn.com/library/{$libraryId}/videos", [
-            'title' => $validated['title'],
-        ]);
-
-        if (!$response->successful()) {
-            Log::warning('Bunny init failed', [
-                'library_id' => $libraryId,
-                'status' => $response->status(),
-                'body' => $response->body(),
-            ]);
-            return response()->json([
-                'error' => 'Failed to create Bunny video.',
-                'bunny_status' => $response->status(),
-                'bunny_response' => $response->json() ?: $response->body(),
-            ], 502);
-        }
-
-        $videoId = $response->json('guid') ?? $response->json('videoId') ?? $response->json('id');
-
-        if (!$videoId) {
-            return response()->json(['error' => 'Bunny did not return a video id.'], 502);
-        }
-
-        $expires = now()->addHours(6)->timestamp;
-        $signature = hash('sha256', $libraryId . $apiKey . $expires . $videoId);
-
-        return response()->json([
-            'video_id' => $videoId,
-            'library_id' => (string) $libraryId,
-            'expires' => $expires,
-            'signature' => $signature,
-            'upload_endpoint' => 'https://video.bunnycdn.com/tusupload',
-        ]);
-    }
-
-    public function bunnyUploadFinalize(Request $request)
+    public function bunnyUploadFinalize(Request $request, Brand $brand)
     {
         $validated = $request->validate([
             'video_id' => ['required', 'string'],
@@ -352,7 +309,8 @@ class EpisodeController extends Controller
         ])->get("https://video.bunnycdn.com/library/{$libraryId}/videos/{$validated['video_id']}");
 
         if (!$response->successful()) {
-            Log::warning('Bunny finalize failed', [
+            Log::warning('Bunny finalize failed for sponsor video', [
+                'brand_id' => $brand->id,
                 'library_id' => $libraryId,
                 'video_id' => $validated['video_id'],
                 'status' => $response->status(),
@@ -365,16 +323,14 @@ class EpisodeController extends Controller
             ], 502);
         }
 
-        $embedUrl = "https://iframe.mediadelivery.net/embed/{$libraryId}/{$validated['video_id']}";
-
         return response()->json([
             'video_id' => $validated['video_id'],
             'library_id' => (string) $libraryId,
-            'embed_url' => $embedUrl,
+            'embed_url' => "https://iframe.mediadelivery.net/embed/{$libraryId}/{$validated['video_id']}",
         ]);
     }
 
-    public function bunnyThumbnailUpload(Request $request)
+    public function bunnyThumbnailUpload(Request $request, Brand $brand)
     {
         $validated = $request->validate([
             'video_id' => ['required', 'string'],
@@ -406,7 +362,8 @@ class EpisodeController extends Controller
             ->post("https://video.bunnycdn.com/library/{$libraryId}/videos/{$validated['video_id']}/thumbnail");
 
         if (!$setResponse->successful()) {
-            Log::warning('Bunny thumbnail set failed', [
+            Log::warning('Bunny thumbnail set failed for sponsor video', [
+                'brand_id' => $brand->id,
                 'library_id' => $libraryId,
                 'video_id' => $validated['video_id'],
                 'status' => $setResponse->status(),
@@ -424,7 +381,8 @@ class EpisodeController extends Controller
         ])->get("https://video.bunnycdn.com/library/{$libraryId}/videos/{$validated['video_id']}");
 
         if (!$getResponse->successful()) {
-            Log::warning('Bunny thumbnail fetch failed', [
+            Log::warning('Bunny thumbnail fetch failed for sponsor video', [
+                'brand_id' => $brand->id,
                 'library_id' => $libraryId,
                 'video_id' => $validated['video_id'],
                 'status' => $getResponse->status(),
@@ -454,5 +412,10 @@ class EpisodeController extends Controller
             'thumbnail_file_name' => $thumbFileName,
             'thumbnail_url' => $thumbUrl,
         ]);
+    }
+
+    protected function ensureOwnership(Brand $brand, SponsorVideo $video): void
+    {
+        abort_unless($video->brand_id === $brand->id, 404);
     }
 }

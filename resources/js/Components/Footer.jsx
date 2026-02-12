@@ -22,6 +22,9 @@ export default function Footer() {
                     >
                         Home
                     </Link>
+                    <Link href={route('all-episodes-list')} className="text-sm font-medium text-gray-300 hover:text-[#ffde59] transition-colors">
+                        Episodes
+                    </Link>
                     <Link
                         href={route('meet-bruce')}
                         className="text-sm font-medium text-gray-300 hover:text-[#ffde59] transition-colors"

@@ -2,12 +2,12 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import DangerButton from '@/Components/DangerButton';
 import Modal from '@/Components/Modal';
 import PrimaryButton from '@/Components/PrimaryButton';
-import { getYouTubeThumbnail } from '@/utils/youtube';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
 export default function Index({ episodes, filters }) {
     const { flash } = usePage().props;
+    console.log(episodes);
     const [deleteId, setDeleteId] = useState(null);
     const [search, setSearch] = useState(filters?.search ?? '');
 
@@ -48,6 +48,11 @@ export default function Index({ episodes, filters }) {
                         {flash.success}
                     </div>
                 )}
+                {flash?.error && (
+                    <div className="mb-4 rounded-md bg-red-100 px-4 py-3 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                        {flash.error}
+                    </div>
+                )}
 
                 <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <form onSubmit={handleSearch} className="flex flex-1 gap-2 sm:max-w-md">
@@ -86,9 +91,9 @@ export default function Index({ episodes, filters }) {
                                         className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:gap-6 sm:p-6"
                                     >
                                         <div className="h-24 w-full shrink-0 overflow-hidden rounded-lg bg-gray-200 sm:h-20 sm:w-36 dark:bg-slate-700">
-                                            {episode.video_url ? (
+                                            {episode.thumbnail_url ? (
                                                 <img
-                                                    src={getYouTubeThumbnail(episode.video_url)}
+                                                    src={episode.thumbnail_url}
                                                     alt=""
                                                     className="h-full w-full object-cover"
                                                 />
@@ -114,6 +119,30 @@ export default function Index({ episodes, filters }) {
                                             )}
                                         </div>
                                         <div className="flex shrink-0 items-center gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    router.patch(route('episodes.toggle-status', episode.id), {}, { preserveScroll: true })
+                                                }
+                                                className={`inline-flex h-8 w-14 items-center rounded-full p-1 transition ${
+                                                    episode.status
+                                                        ? 'bg-emerald-500'
+                                                        : 'bg-gray-300 dark:bg-slate-600'
+                                                }`}
+                                                aria-label={`Toggle status for ${episode.title}`}
+                                            >
+                                                <span
+                                                    className={`h-6 w-6 rounded-full bg-white shadow transition-transform ${
+                                                        episode.status ? 'translate-x-6' : 'translate-x-0'
+                                                    }`}
+                                                />
+                                            </button>
+                                            <Link
+                                                href={route('episodes.clips.index', episode.id)}
+                                                className="rounded-md border border-indigo-300 bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 shadow-sm hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-900/20 dark:text-indigo-300 dark:hover:bg-indigo-900/40"
+                                            >
+                                                Videos
+                                            </Link>
                                             <Link
                                                 href={route('episodes.edit', episode.id)}
                                                 className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"

@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'bunny' => [
+        'api_key' => env('BUNNY_API_KEY'),
+        'library_id' => env('BUNNY_LIBRARY_ID'),
+        'pull_zone' => env('BUNNY_PULL_ZONE'),
+    ],
+
 ];
