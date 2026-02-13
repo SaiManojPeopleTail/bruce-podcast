@@ -34,8 +34,8 @@ Route::get('/episodes/clips', [EpisodesViewController::class, 'clipsIndex'])->na
 Route::get('/episodes/clip/{slug}', [EpisodesViewController::class, 'clipShow'])->name('episode-clip-show');
 Route::get('/sponsor-videos', [EpisodesViewController::class, 'sponsorVideosIndex'])->name('sponsor-videos-list');
 Route::get('/sponsor-video/{slug}', [EpisodesViewController::class, 'sponsorVideoShow'])->name('sponsor-video-show');
-// Route::get('/our-brands', [BrandsViewController::class, 'index'])->name('our-brands-list');
-// Route::get('/our-brands/{brand}', [BrandsViewController::class, 'show'])->name('our-brands-show');
+Route::get('/our-brands', [BrandsViewController::class, 'index'])->name('our-brands-list');
+Route::get('/our-brands/{brand}', [BrandsViewController::class, 'show'])->name('our-brands-show');
 
 Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', function () {
@@ -97,6 +97,10 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () {
     Route::get('/site-settings', [SiteSettingsController::class, 'index'])->name('site-settings.index');
     Route::get('/site-settings/pages/{page}/edit', [SiteSettingsController::class, 'edit'])->name('site-settings.pages.edit');
     Route::patch('/site-settings/pages/{page}', [SiteSettingsController::class, 'update'])->name('site-settings.pages.update');
+
+    Route::get('/preview/episode/{episode}', [EpisodesViewController::class, 'episodePreview'])->name('preview.episode');
+    Route::get('/preview/clip/{clip}', [EpisodesViewController::class, 'clipPreview'])->name('preview.clip');
+    Route::get('/preview/sponsor-video/{video}', [EpisodesViewController::class, 'sponsorVideoPreview'])->name('preview.sponsor-video');
 
     Route::get('/api/youtube-oembed', function (Request $request) {
         $url = $request->query('url');

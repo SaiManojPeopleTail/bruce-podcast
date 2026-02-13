@@ -3,13 +3,24 @@ import DangerButton from '@/Components/DangerButton';
 import Modal from '@/Components/Modal';
 import PrimaryButton from '@/Components/PrimaryButton';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 
 export default function Index({ brand, videos, filters }) {
     const { flash } = usePage().props;
     const [deleteId, setDeleteId] = useState(null);
     const [search, setSearch] = useState(filters?.search ?? '');
+    const [openMenuId, setOpenMenuId] = useState(null);
+
+    useEffect(() => {
+        const onDocClick = (event) => {
+            if (!event.target.closest('[data-actions-menu]')) {
+                setOpenMenuId(null);
+            }
+        };
+        document.addEventListener('click', onDocClick);
+        return () => document.removeEventListener('click', onDocClick);
+    }, []);
 
     const handleSearch = (e) => {
         e.preventDefault();
@@ -73,13 +84,13 @@ export default function Index({ brand, videos, filters }) {
                     </div>
                 </div>
 
-                <div className="overflow-hidden rounded-lg bg-white shadow dark:bg-slate-800">
+                <div className="overflow-visible rounded-lg bg-white shadow dark:bg-slate-800">
                     {videoList.length === 0 ? (
                         <div className="p-12 text-center text-gray-500 dark:text-slate-400">
                             {filters?.search ? 'No videos match your search.' : 'No videos yet. Upload the first one.'}
                         </div>
                     ) : (
-                        <ul className="divide-y divide-gray-200 dark:divide-slate-700">
+                        <ul className="overflow-visible divide-y divide-gray-200 dark:divide-slate-700">
                             {videoList.map((video) => (
                                 <li key={video.id} className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:gap-6 sm:p-6">
                                     <div className="h-24 w-full shrink-0 overflow-hidden rounded-lg bg-gray-200 sm:h-20 sm:w-36 dark:bg-slate-700">
@@ -122,6 +133,42 @@ export default function Index({ brand, videos, filters }) {
                                         >
                                             Delete
                                         </button>
+                                        <div className="relative" data-actions-menu>
+                                            <button
+                                                type="button"
+                                                onClick={() => setOpenMenuId((id) => (id === video.id ? null : video.id))}
+                                                className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 shadow-sm hover:bg-gray-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
+                                                aria-label={`More actions for ${video.title}`}
+                                            >
+                                                <span className="text-lg leading-none">⋯</span>
+                                            </button>
+                                            {openMenuId === video.id && (
+                                                <div className="absolute right-0 z-20 mt-2 w-52 rounded-lg border border-gray-200 bg-white p-1 shadow-lg dark:border-slate-600 dark:bg-slate-800">
+                                                    {video.status ? (
+                                                        <a
+                                                            href={route('sponsor-video-show', { slug: video.slug })}
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-slate-200 dark:hover:bg-slate-700"
+                                                        >
+                                                            Live link
+                                                        </a>
+                                                    ) : (
+                                                        <span className="block cursor-not-allowed rounded-md px-3 py-2 text-sm text-gray-400 dark:text-slate-500">
+                                                            Live link (status off)
+                                                        </span>
+                                                    )}
+                                                    <a
+                                                        href={route('preview.sponsor-video', video.id)}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-slate-200 dark:hover:bg-slate-700"
+                                                    >
+                                                        Preview draft link
+                                                    </a>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </li>
                             ))}

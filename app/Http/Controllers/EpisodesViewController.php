@@ -354,60 +354,39 @@ class EpisodesViewController extends Controller
 
     public function sponsorVideoShow(string $slug)
     {
-        $video = SponsorVideo::where('slug', $slug)->first();
-        if (!$video) {
-            abort(404);
-        }
-        $canonical = url()->current();
-        Meta::addMeta('title', $video->title);
-        Meta::addMeta('description', $video->short_description ?: $video->long_description);
-        Meta::addMeta('og:title', $video->title);
-        Meta::addMeta('og:description', $video->short_description ?: $video->long_description);
-        Meta::addMeta('og:url', $canonical);
-        Meta::setCanonical($canonical);
-        Meta::addMeta('og:type', 'website');
-        if ($video->thumbnail_url) {
-            Meta::addMeta('og:image', $video->thumbnail_url);
-        } else {
-            Meta::addMeta('og:image', static::defaultOgImage());
-        }
-        return Inertia::render('SponsorVideo', [
-            'video' => $video,
-        ]);
+        $video = SponsorVideo::where('slug', $slug)->firstOrFail();
+        return $this->renderSponsorVideoPage($video, false);
     }
 
     public function clipShow(string $slug)
     {
-        $video = Clip::where('slug', $slug)->first();
-        if (!$video) {
-            abort(404);
-        }
-        $canonical = url()->current();
-        Meta::addMeta('title', $video->title);
-        Meta::addMeta('description', $video->short_description ?: $video->long_description);
-        Meta::addMeta('og:title', $video->title);
-        Meta::addMeta('og:description', $video->short_description ?: $video->long_description);
-        Meta::addMeta('og:url', $canonical);
-        Meta::setCanonical($canonical);
-        Meta::addMeta('og:type', 'website');
-        if ($video->thumbnail_url) {
-            Meta::addMeta('og:image', $video->thumbnail_url);
-        } else {
-            Meta::addMeta('og:image', static::defaultOgImage());
-        }
-        return Inertia::render('Clip', [
-            'video' => $video,
-        ]);
+        $video = Clip::where('slug', $slug)->firstOrFail();
+        return $this->renderClipPage($video, false);
     }
 
     public function episode(string $slug)
     {
-        $episode = Episode::where('slug', $slug)->first();
+        $episode = Episode::where('slug', $slug)->firstOrFail();
+        return $this->renderEpisodePage($episode, false);
+    }
 
-        if (!$episode) {
-            abort(404);
-        }
+    public function episodePreview(Episode $episode)
+    {
+        return $this->renderEpisodePage($episode, true);
+    }
 
+    public function clipPreview(Clip $clip)
+    {
+        return $this->renderClipPage($clip, true);
+    }
+
+    public function sponsorVideoPreview(SponsorVideo $video)
+    {
+        return $this->renderSponsorVideoPage($video, true);
+    }
+
+    protected function renderEpisodePage(Episode $episode, bool $isPreview)
+    {
         $canonical = url()->current();
         Meta::addMeta('title', $episode->title);
         Meta::addMeta('description', $episode->short_description ?: $episode->long_description);
@@ -427,8 +406,65 @@ class EpisodesViewController extends Controller
             }
         }
 
+        if ($isPreview) {
+            Meta::addMeta('robots', 'noindex, nofollow');
+        }
+
         return Inertia::render('Episode', [
             'episode' => $episode,
+            'isPreview' => $isPreview,
+        ]);
+    }
+
+    protected function renderClipPage(Clip $video, bool $isPreview)
+    {
+        $canonical = url()->current();
+        Meta::addMeta('title', $video->title);
+        Meta::addMeta('description', $video->short_description ?: $video->long_description);
+        Meta::addMeta('og:title', $video->title);
+        Meta::addMeta('og:description', $video->short_description ?: $video->long_description);
+        Meta::addMeta('og:url', $canonical);
+        Meta::setCanonical($canonical);
+        Meta::addMeta('og:type', 'website');
+        if ($video->thumbnail_url) {
+            Meta::addMeta('og:image', $video->thumbnail_url);
+        } else {
+            Meta::addMeta('og:image', static::defaultOgImage());
+        }
+
+        if ($isPreview) {
+            Meta::addMeta('robots', 'noindex, nofollow');
+        }
+
+        return Inertia::render('Clip', [
+            'video' => $video,
+            'isPreview' => $isPreview,
+        ]);
+    }
+
+    protected function renderSponsorVideoPage(SponsorVideo $video, bool $isPreview)
+    {
+        $canonical = url()->current();
+        Meta::addMeta('title', $video->title);
+        Meta::addMeta('description', $video->short_description ?: $video->long_description);
+        Meta::addMeta('og:title', $video->title);
+        Meta::addMeta('og:description', $video->short_description ?: $video->long_description);
+        Meta::addMeta('og:url', $canonical);
+        Meta::setCanonical($canonical);
+        Meta::addMeta('og:type', 'website');
+        if ($video->thumbnail_url) {
+            Meta::addMeta('og:image', $video->thumbnail_url);
+        } else {
+            Meta::addMeta('og:image', static::defaultOgImage());
+        }
+
+        if ($isPreview) {
+            Meta::addMeta('robots', 'noindex, nofollow');
+        }
+
+        return Inertia::render('SponsorVideo', [
+            'video' => $video,
+            'isPreview' => $isPreview,
         ]);
     }
 }

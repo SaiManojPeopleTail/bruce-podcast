@@ -3,13 +3,23 @@ import DangerButton from '@/Components/DangerButton';
 import Modal from '@/Components/Modal';
 import PrimaryButton from '@/Components/PrimaryButton';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function Index({ episodes, filters }) {
     const { flash } = usePage().props;
-    console.log(episodes);
     const [deleteId, setDeleteId] = useState(null);
     const [search, setSearch] = useState(filters?.search ?? '');
+    const [openMenuId, setOpenMenuId] = useState(null);
+
+    useEffect(() => {
+        const onDocClick = (event) => {
+            if (!event.target.closest('[data-actions-menu]')) {
+                setOpenMenuId(null);
+            }
+        };
+        document.addEventListener('click', onDocClick);
+        return () => document.removeEventListener('click', onDocClick);
+    }, []);
 
     const handleSearch = (e) => {
         e.preventDefault();
@@ -75,7 +85,7 @@ export default function Index({ episodes, filters }) {
                     </Link>
                 </div>
 
-                <div className="overflow-hidden rounded-lg bg-white shadow dark:bg-slate-800">
+                <div className="overflow-visible rounded-lg bg-white shadow dark:bg-slate-800">
                     {episodeList.length === 0 ? (
                         <div className="p-12 text-center text-gray-500 dark:text-slate-400">
                             {filters?.search
@@ -84,7 +94,7 @@ export default function Index({ episodes, filters }) {
                         </div>
                     ) : (
                         <>
-                            <ul className="divide-y divide-gray-200 dark:divide-slate-700">
+                            <ul className="overflow-visible divide-y divide-gray-200 dark:divide-slate-700">
                                 {episodeList.map((episode) => (
                                     <li
                                         key={episode.id}
@@ -156,6 +166,42 @@ export default function Index({ episodes, filters }) {
                                             >
                                                 Delete
                                             </button>
+                                            <div className="relative" data-actions-menu>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setOpenMenuId((id) => (id === episode.id ? null : episode.id))}
+                                                    className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 shadow-sm hover:bg-gray-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
+                                                    aria-label={`More actions for ${episode.title}`}
+                                                >
+                                                    <span className="text-lg leading-none">⋯</span>
+                                                </button>
+                                                {openMenuId === episode.id && (
+                                                    <div className="absolute right-0 z-20 mt-2 w-52 rounded-lg border border-gray-200 bg-white p-1 shadow-lg dark:border-slate-600 dark:bg-slate-800">
+                                                        {episode.status ? (
+                                                            <a
+                                                                href={route('episode', { slug: episode.slug })}
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                                className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-slate-200 dark:hover:bg-slate-700"
+                                                            >
+                                                                Live link
+                                                            </a>
+                                                        ) : (
+                                                            <span className="block cursor-not-allowed rounded-md px-3 py-2 text-sm text-gray-400 dark:text-slate-500">
+                                                                Live link (status off)
+                                                            </span>
+                                                        )}
+                                                        <a
+                                                            href={route('preview.episode', episode.id)}
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-slate-200 dark:hover:bg-slate-700"
+                                                        >
+                                                            Preview draft link
+                                                        </a>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </li>
                                 ))}

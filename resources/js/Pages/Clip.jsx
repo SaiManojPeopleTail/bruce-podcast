@@ -15,7 +15,7 @@ function formatDatePosted(createdAt) {
     });
 }
 
-export default function Clip({ video }) {
+export default function Clip({ video, isPreview = false }) {
     const datePosted = formatDatePosted(video?.created_at);
     const [copied, setCopied] = useState(false);
     const copyTimeoutRef = useRef(null);
@@ -77,6 +77,11 @@ export default function Clip({ video }) {
         <HomeLayout>
             <Head title={video?.title ?? 'Clip'} />
             <section className="relative min-h-screen w-full max-w-7xl mx-auto flex flex-col px-4 sm:px-6 lg:px-8 py-20">
+                {isPreview && (
+                    <div className="mb-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-900">
+                        Preview mode: only logged-in admins can access this draft link.
+                    </div>
+                )}
                 <div className="flex items-center justify-start mb-1">
                     <button
                         type="button"

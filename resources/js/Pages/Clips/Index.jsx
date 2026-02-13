@@ -3,13 +3,24 @@ import DangerButton from '@/Components/DangerButton';
 import Modal from '@/Components/Modal';
 import PrimaryButton from '@/Components/PrimaryButton';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 
 export default function Index({ episode, clips, filters }) {
     const { flash } = usePage().props;
     const [deleteId, setDeleteId] = useState(null);
     const [search, setSearch] = useState(filters?.search ?? '');
+    const [openMenuId, setOpenMenuId] = useState(null);
+
+    useEffect(() => {
+        const onDocClick = (event) => {
+            if (!event.target.closest('[data-actions-menu]')) {
+                setOpenMenuId(null);
+            }
+        };
+        document.addEventListener('click', onDocClick);
+        return () => document.removeEventListener('click', onDocClick);
+    }, []);
 
     const handleSearch = (e) => {
         e.preventDefault();
@@ -69,13 +80,13 @@ export default function Index({ episode, clips, filters }) {
                     </div>
                 </div>
 
-                <div className="overflow-hidden rounded-lg bg-white shadow dark:bg-slate-800">
+                <div className="overflow-visible rounded-lg bg-white shadow dark:bg-slate-800">
                     {clipList.length === 0 ? (
                         <div className="p-12 text-center text-gray-500 dark:text-slate-400">
                             {filters?.search ? 'No clips match your search.' : 'No clips yet. Upload the first one.'}
                         </div>
                     ) : (
-                        <ul className="divide-y divide-gray-200 dark:divide-slate-700">
+                        <ul className="overflow-visible divide-y divide-gray-200 dark:divide-slate-700">
                             {clipList.map((clip) => (
                                 <li key={clip.id} className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:gap-6 sm:p-6">
                                     <div className="h-24 w-full shrink-0 overflow-hidden rounded-lg bg-gray-200 sm:h-20 sm:w-36 dark:bg-slate-700">
@@ -108,6 +119,42 @@ export default function Index({ episode, clips, filters }) {
                                         >
                                             Delete
                                         </button>
+                                        <div className="relative" data-actions-menu>
+                                            <button
+                                                type="button"
+                                                onClick={() => setOpenMenuId((id) => (id === clip.id ? null : clip.id))}
+                                                className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 shadow-sm hover:bg-gray-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
+                                                aria-label={`More actions for ${clip.title}`}
+                                            >
+                                                <span className="text-lg leading-none">⋯</span>
+                                            </button>
+                                            {openMenuId === clip.id && (
+                                                <div className="absolute right-0 z-20 mt-2 w-52 rounded-lg border border-gray-200 bg-white p-1 shadow-lg dark:border-slate-600 dark:bg-slate-800">
+                                                    {clip.status ? (
+                                                        <a
+                                                            href={route('episode-clip-show', { slug: clip.slug })}
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-slate-200 dark:hover:bg-slate-700"
+                                                        >
+                                                            Live link
+                                                        </a>
+                                                    ) : (
+                                                        <span className="block cursor-not-allowed rounded-md px-3 py-2 text-sm text-gray-400 dark:text-slate-500">
+                                                            Live link (status off)
+                                                        </span>
+                                                    )}
+                                                    <a
+                                                        href={route('preview.clip', clip.id)}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-slate-200 dark:hover:bg-slate-700"
+                                                    >
+                                                        Preview draft link
+                                                    </a>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </li>
                             ))}
