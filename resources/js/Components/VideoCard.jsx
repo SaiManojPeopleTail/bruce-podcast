@@ -82,10 +82,13 @@ export default function VideoCard({ video_data, href, actionLabel = 'View Podcas
                         {(() => {
                             const desc = video_data.short_description;
                             if (!desc) return null;
-                            if (desc.length <= 250) return desc;
+                            // Use shorter length for mobile screens, fallback to 250 for larger
+                            const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+                            const maxLen = isMobile ? 180 : 250;
+                            if (desc.length <= maxLen) return desc;
                             return (
                                 <>
-                                    {desc.slice(0, 250)}&nbsp;...
+                                    {desc.slice(0, maxLen)}&nbsp;...
                                 </>
                             );
                         })()}
