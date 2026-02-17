@@ -78,8 +78,19 @@ export default function VideoCard({ video_data, href, actionLabel = 'View Podcas
                     <h3 className="text-xl md:text-2xl font-bold text-gray-900 group-hover:text-[#b59100] transition-colors duration-300">
                         {video_data.title}
                     </h3>
-                    <p className="text-gray-600 group-hover:text-gray-800 transition-colors duration-300 line-clamp-2 sm:line-clamp-3">
-                        {video_data.short_description}
+                    <p className="text-gray-600 group-hover:text-gray-800 transition-colors duration-300">
+                        {(() => {
+                            if (!video_data.short_description) return null;
+                            const words = video_data.short_description.split(/\s+/);
+                            if (words.length <= 120) {
+                                return video_data.short_description;
+                            }
+                            return (
+                                <>
+                                    {words.slice(0, 120).join(' ')}&nbsp;...
+                                </>
+                            );
+                        })()}
                     </p>
                     <div className="mt-auto pt-4 flex justify-end">
                         <span className="inline-flex items-center gap-2 text-[#b59100] font-semibold plus-jakarta-sans-700 group-hover:text-[#ffde59] transition-colors duration-300">
