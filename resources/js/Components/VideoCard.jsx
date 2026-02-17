@@ -80,14 +80,12 @@ export default function VideoCard({ video_data, href, actionLabel = 'View Podcas
                     </h3>
                     <p className="text-gray-600 group-hover:text-gray-800 transition-colors duration-300">
                         {(() => {
-                            if (!video_data.short_description) return null;
-                            const words = video_data.short_description.split(/\s+/);
-                            if (words.length <= 64) {
-                                return video_data.short_description;
-                            }
+                            const desc = video_data.short_description;
+                            if (!desc) return null;
+                            if (desc.length <= 150) return desc;
                             return (
                                 <>
-                                    {words.slice(0, 120).join(' ')}&nbsp;...
+                                    {desc.slice(0, 150)}&nbsp;...
                                 </>
                             );
                         })()}
