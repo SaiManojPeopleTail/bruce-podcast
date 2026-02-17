@@ -6,6 +6,7 @@ use App\Meta;
 use App\Models\Brand;
 use App\Models\Episode;
 use App\Models\Page;
+use App\Models\Personality;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -132,6 +133,10 @@ class WelcomeController extends Controller
                 }])
                 ->orderByDesc('created_at')
                 ->get(),
+            'personalities' => Personality::query()
+                ->where('status', true)
+                ->orderBy('name')
+                ->get(['id', 'name', 'video_path', 'status', 'created_at', 'updated_at']),
         ]);
     }
 

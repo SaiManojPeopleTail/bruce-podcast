@@ -22,7 +22,7 @@ const TABS = [
     { id: 'emerging', label: 'Emerging Brands' },
 ];
 
-export default function BrandPartnerships({ brands = [] }) {
+export default function BrandPartnerships({ brands = [], personalities = [] }) {
     const [activeTab, setActiveTab] = useState('overview');
 
     return (
@@ -193,13 +193,13 @@ export default function BrandPartnerships({ brands = [] }) {
                                         <p className="text-gray-700 mb-4">
                                             Our podcast is supported by a curated roster of respected personalities who understand the natural health space and communicate product value with authenticity and authority.
                                         </p>
-                                        <div className='w-full flex justify-center'>
+                                        {/* <div className='w-full flex justify-center'>
                                             <div className='w-[500px] flex flex-col items-center justify-center bg-white px-4 gap-3 py-8 shadow-lg rounded-xl border border-amber-300 select-none cursor-pointer hover:scale-[1.03] transition-all duration-300 hover:bg-amber-50/30'>
                                                 <h3 className='text-3xl sm:text-4xl font-bold barlow-condensed-semibold text-gray-700 mb-2'>Coming Soon</h3>
                                                 <p className='text-gray-700 mb-4 text-center'>Personality Gallery is on the way. Stay tuned for more information.</p>
                                             </div>
-                                        </div>
-                                        {/* <GalleryOfPersonalities /> */}
+                                        </div> */}
+                                        <GalleryOfPersonalities people={personalities} />
                                     </div>
                                     <div className="pt-4 border-t border-gray-100">
                                         <h3 className="text-base font-semibold text-gray-900 mb-2">Why Brands Partner With Us</h3>

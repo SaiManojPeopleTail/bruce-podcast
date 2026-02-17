@@ -5,6 +5,7 @@ use App\Http\Controllers\BrandsViewController;
 use App\Http\Controllers\ClipController;
 use App\Http\Controllers\EpisodeController;
 use App\Http\Controllers\EpisodesViewController;
+use App\Http\Controllers\PersonalityController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\SiteSettingsController;
@@ -87,6 +88,14 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () {
     Route::post('/brands/{brand}/gallery/upload/bunny/status', [SponsorVideoController::class, 'bunnyVideoStatus'])->name('brands.videos.bunny.status');
     Route::post('/brands/{brand}/gallery/upload/bunny/finalize', [SponsorVideoController::class, 'bunnyUploadFinalize'])->name('brands.videos.bunny.finalize');
     Route::post('/brands/{brand}/gallery/upload/bunny/thumbnail', [SponsorVideoController::class, 'bunnyThumbnailUpload'])->name('brands.videos.bunny.thumbnail');
+
+    Route::get('/personalities', [PersonalityController::class, 'index'])->name('personalities.index');
+    Route::get('/personalities/create', [PersonalityController::class, 'create'])->name('personalities.create');
+    Route::post('/personalities', [PersonalityController::class, 'store'])->name('personalities.store');
+    Route::get('/personalities/{personality}/edit', [PersonalityController::class, 'edit'])->name('personalities.edit');
+    Route::patch('/personalities/{personality}', [PersonalityController::class, 'update'])->name('personalities.update');
+    Route::patch('/personalities/{personality}/toggle-status', [PersonalityController::class, 'toggleStatus'])->name('personalities.toggle-status');
+    Route::delete('/personalities/{personality}', [PersonalityController::class, 'destroy'])->name('personalities.destroy');
 
     Route::get('/users', [UserController::class, 'index'])->name('users.index');
     Route::get('/users/create', [UserController::class, 'create'])->name('users.create');

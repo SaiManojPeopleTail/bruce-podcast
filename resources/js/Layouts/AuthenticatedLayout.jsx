@@ -98,6 +98,12 @@ export default function AuthenticatedLayout({ header, children }) {
                             </svg>
                             Brands
                         </NavItem>
+                        <NavItem href={route('personalities.index')} active={route().current('personalities.*')}>
+                            <svg className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4a4 4 0 100 8 4 4 0 000-8zM6 20a6 6 0 0112 0" />
+                            </svg>
+                            Personalities
+                        </NavItem>
                         {user.id < 3 && (
                             <>
                                 <NavItem href={route('users.index')} active={route().current('users.*')}>
