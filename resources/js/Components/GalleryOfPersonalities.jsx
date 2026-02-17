@@ -38,7 +38,7 @@ export default function GalleryOfPersonalities({ people = [], className = '' }) 
     const items = useMemo(() => normalizePeople(people), [people]);
     const [current, setCurrent] = useState(0);
     const [isInView, setIsInView] = useState(false);
-    const [isMuted, setIsMuted] = useState(true);
+    const [isMuted, setIsMuted] = useState(false);
     const [isPlaying, setIsPlaying] = useState(true);
 
     const sectionRef = useRef(null);
