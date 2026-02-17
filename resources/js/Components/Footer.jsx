@@ -65,17 +65,6 @@ export default function Footer() {
                             <i className="bi bi-linkedin text-2xl"></i>
                         </a>
                         <a
-                            href="https://youtube.com"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-2 text-gray-400 hover:text-[#ffde59] transition-colors rounded focus:outline-none focus:ring-2 focus:ring-[#ffde59]/50"
-                            aria-label="Listen on YouTube"
-                            data-tooltip-id="footer-social"
-                            data-tooltip-content="Listen on YouTube"
-                        >
-                            <i className="bi bi-youtube text-2xl"></i>
-                        </a>
-                        <a
                             href="https://spotify.com"
                             target="_blank"
                             rel="noopener noreferrer"
