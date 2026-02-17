@@ -82,10 +82,10 @@ export default function VideoCard({ video_data, href, actionLabel = 'View Podcas
                         {(() => {
                             const desc = video_data.short_description;
                             if (!desc) return null;
-                            if (desc.length <= 150) return desc;
+                            if (desc.length <= 250) return desc;
                             return (
                                 <>
-                                    {desc.slice(0, 150)}&nbsp;...
+                                    {desc.slice(0, 250)}&nbsp;...
                                 </>
                             );
                         })()}
