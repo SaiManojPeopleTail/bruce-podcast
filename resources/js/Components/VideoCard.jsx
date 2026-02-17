@@ -44,7 +44,7 @@ export default function VideoCard({ video_data, href, actionLabel = 'View Podcas
                 {/* Thumbnail - full width on mobile, wider on desktop; landscape box; portrait = contain + blurred bg */}
                 <div className="sm:w-96 sm:min-w-[24rem] lg:w-[28rem] lg:min-w-[28rem] flex-shrink-0 overflow-hidden rounded-l-none rounded-t-xl sm:rounded-t-none sm:rounded-l-xl">
                     <motion.div
-                        className="relative aspect-video sm:aspect-auto sm:h-full w-full max-h-[140px] sm:max-h-[235px] overflow-hidden flex-shrink-0"
+                        className="relative aspect-video sm:aspect-auto sm:h-full w-full max-h-[224px] sm:max-h-[235px] overflow-hidden flex-shrink-0"
                         whileHover={{ scale: 1.03 }}
                         transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
                     >
