@@ -43,12 +43,25 @@ export default function GalleryOfPersonalities({ people = [], className = '' }) 
     const [isInView, setIsInView] = useState(false);
     const [isMuted, setIsMuted] = useState(false);
     const [isPlaying, setIsPlaying] = useState(true);
+    const [isMobile, setIsMobile] = useState(false);
+    const [mobileControlsVisible, setMobileControlsVisible] = useState(true);
 
     const sectionRef = useRef(null);
     const centerVideoRef = useRef(null);
     const touchStartRef = useRef({ x: 0, y: 0 });
+    const controlsTimeoutRef = useRef(null);
 
     const SWIPE_THRESHOLD = 50;
+    const CONTROLS_VISIBLE_MS = 2500;
+
+    const showControlsAndScheduleHide = () => {
+        setMobileControlsVisible(true);
+        if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+        controlsTimeoutRef.current = setTimeout(() => {
+            setMobileControlsVisible(false);
+            controlsTimeoutRef.current = null;
+        }, CONTROLS_VISIBLE_MS);
+    };
 
     const handleTouchStart = (e) => {
         const t = e.touches[0];
@@ -59,9 +72,16 @@ export default function GalleryOfPersonalities({ people = [], className = '' }) 
         const t = e.changedTouches[0];
         const dx = t.clientX - touchStartRef.current.x;
         const dy = t.clientY - touchStartRef.current.y;
-        if (Math.abs(dx) <= SWIPE_THRESHOLD || Math.abs(dx) < Math.abs(dy)) return;
-        if (dx < 0) next();
-        else prev();
+        if (Math.abs(dx) > SWIPE_THRESHOLD && Math.abs(dx) >= Math.abs(dy)) {
+            if (dx < 0) next();
+            else prev();
+            return;
+        }
+        if (isMobile) showControlsAndScheduleHide();
+    };
+
+    const handleVideoBlockClick = () => {
+        if (isMobile) showControlsAndScheduleHide();
     };
 
     const indexById = useMemo(() => {
@@ -69,6 +89,26 @@ export default function GalleryOfPersonalities({ people = [], className = '' }) 
         items.forEach((item, index) => map.set(item.id, index));
         return map;
     }, [items]);
+
+    useEffect(() => {
+        const mq = window.matchMedia('(max-width: 767px)');
+        const update = () => setIsMobile(mq.matches);
+        update();
+        mq.addEventListener('change', update);
+        return () => mq.removeEventListener('change', update);
+    }, []);
+
+    useEffect(() => {
+        if (!isMobile) return;
+        const t = setTimeout(() => setMobileControlsVisible(false), CONTROLS_VISIBLE_MS);
+        return () => clearTimeout(t);
+    }, [isMobile]);
+
+    useEffect(() => {
+        return () => {
+            if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+        };
+    }, []);
 
     useEffect(() => {
         if (!items.length) {
@@ -162,11 +202,12 @@ export default function GalleryOfPersonalities({ people = [], className = '' }) 
                         </button>
                     </div>
 
-                    {/* Center - always visible; swipe left/right on mobile to change */}
+                    {/* Center - always visible; swipe left/right on mobile to change; tap to show controls */}
                     <div
                         className="order-1 md:order-2 group relative overflow-hidden rounded-xl border border-amber-300 shadow-md w-full touch-pan-y"
                         onTouchStart={handleTouchStart}
                         onTouchEnd={handleTouchEnd}
+                        onClick={handleVideoBlockClick}
                     >
                         <Card {...cardProps('center', slots.center)}>
                             <video
@@ -182,21 +223,23 @@ export default function GalleryOfPersonalities({ people = [], className = '' }) 
                         </Card>
                         <button
                             type="button"
-                            onClick={() => setIsPlaying((v) => !v)}
-                            className="absolute inset-0 m-auto h-12 w-12 rounded-full bg-black/55 text-white flex items-center justify-center opacity-100 md:opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                            onClick={(e) => { e.stopPropagation(); setIsPlaying((v) => !v); }}
+                            className={`absolute inset-0 m-auto h-12 w-12 rounded-full bg-black/55 text-white flex items-center justify-center transition-opacity duration-200 ${isMobile ? (mobileControlsVisible ? 'opacity-100' : 'opacity-0') : 'opacity-0 md:opacity-0 md:group-hover:opacity-100'}`}
                             aria-label={isPlaying ? 'Pause video' : 'Play video'}
                         >
                             {isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6" />}
                         </button>
                         <button
                             type="button"
-                            onClick={() => setIsMuted((v) => !v)}
-                            className="absolute right-3 top-3 h-9 w-9 rounded-full bg-black/55 text-white flex items-center justify-center opacity-100 md:opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                            onClick={(e) => { e.stopPropagation(); setIsMuted((v) => !v); }}
+                            className={`absolute right-3 top-3 h-9 w-9 rounded-full bg-black/55 text-white flex items-center justify-center transition-opacity duration-200 ${isMobile ? (mobileControlsVisible ? 'opacity-100' : 'opacity-0') : 'opacity-0 md:opacity-0 md:group-hover:opacity-100'}`}
                             aria-label={isMuted ? 'Unmute video' : 'Mute video'}
                         >
                             {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
                         </button>
-                        <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-4 py-3 opacity-100 md:opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                        <div
+                            className={`pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-4 py-3 transition-opacity duration-200 ${isMobile ? (mobileControlsVisible ? 'opacity-100' : 'opacity-0') : 'opacity-0 md:opacity-0 md:group-hover:opacity-100'}`}
+                        >
                             <p className="text-base font-bold text-white">{slots.center.name}</p>
                         </div>
                     </div>
