@@ -14,11 +14,18 @@ export default function HeroVideoBackground({
 
     useEffect(() => {
         if (!parallax || !wrapperRef.current) return;
+        let ticking = false;
         const onScroll = () => {
-            if (!wrapperRef.current) return;
-            wrapperRef.current.style.transform = `translateY(${window.scrollY * 0.3}px)`;
+            if (ticking) return;
+            ticking = true;
+            requestAnimationFrame(() => {
+                if (wrapperRef.current) {
+                    wrapperRef.current.style.transform = `translateY(${window.scrollY * 0.3}px)`;
+                }
+                ticking = false;
+            });
         };
-        window.addEventListener('scroll', onScroll);
+        window.addEventListener('scroll', onScroll, { passive: true });
         return () => window.removeEventListener('scroll', onScroll);
     }, [parallax]);
 

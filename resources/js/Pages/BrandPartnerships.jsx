@@ -3,6 +3,7 @@ import HeroVideoBackground from '@/Components/HeroVideoBackground';
 import HeroNav from '@/Components/HeroNav';
 import RecentVideos from '@/Components/RecentVideos';
 import HomeLayout from '@/Layouts/HomeLayout';
+import { useReduceMotion } from '@/hooks/useReduceMotion';
 import { Head, Link } from '@inertiajs/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useState } from 'react';
@@ -23,7 +24,11 @@ const TABS = [
 ];
 
 export default function BrandPartnerships({ brands = [], personalities = [] }) {
+    const reduceMotion = useReduceMotion();
     const [activeTab, setActiveTab] = useState('overview');
+    const Div = reduceMotion ? 'div' : motion.div;
+    const TabContent = reduceMotion ? 'div' : motion.div;
+    const Card = reduceMotion ? 'div' : motion.div;
 
     return (
         <HomeLayout>
@@ -31,17 +36,13 @@ export default function BrandPartnerships({ brands = [], personalities = [] }) {
             <section className="relative min-h-screen overflow-hidden flex flex-col items-center justify-start px-4 sm:px-6 lg:px-8 py-16 pb-28">
                 <HeroVideoBackground />
                 <div className="absolute inset-0 bg-black/50 z-0" />
-                <motion.div
+                <Div
                     className="relative z-10 w-full max-w-7xl flex flex-col"
-                    initial={{ opacity: 0, y: 16 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.25, ease: 'easeOut' }}
+                    {...(!reduceMotion && { initial: { opacity: 0, y: 16 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.25, ease: 'easeOut' } })}
                 >
-                    <motion.div
+                    <Div
                         className="relative bg-white/95 backdrop-blur rounded-2xl shadow-2xl flex flex-col overflow-hidden max-h-[80vh] min-h-[400px]"
-                        initial={{ opacity: 0, scale: 0.99 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.2, delay: 0.05, ease: 'easeOut' }}
+                        {...(!reduceMotion && { initial: { opacity: 0, scale: 0.99 }, animate: { opacity: 1, scale: 1 }, transition: { duration: 0.2, delay: 0.05, ease: 'easeOut' } })}
                     >
                         <Link
                             href={route('welcome')}
@@ -81,14 +82,10 @@ export default function BrandPartnerships({ brands = [], personalities = [] }) {
                         <div className="flex-1 overflow-y-auto px-6 sm:px-8 pb-4 min-h-0">
                             <AnimatePresence mode="wait">
                             {activeTab === 'overview' && (
-                                <motion.div
+                                <TabContent
                                     key="overview"
                                     className="space-y-6 text-gray-700 leading-relaxed"
-                                    variants={tabVariants}
-                                    initial="in"
-                                    animate="active"
-                                    exit="out"
-                                    transition={quick}
+                                    {...(!reduceMotion && { variants: tabVariants, initial: 'in', animate: 'active', exit: 'out', transition: quick })}
                                 >
                                     <div>
                                         <h2 className="text-lg font-bold barlow-condensed-semibold text-gray-900 mb-3">
@@ -133,54 +130,48 @@ export default function BrandPartnerships({ brands = [], personalities = [] }) {
                                         </div>
                                         <p className="text-md text-gray-600 mt-1">Includes scripting support, personality selection, and polished video ready for broadcast.</p>
                                     </div>
-                                </motion.div>
+                                </TabContent>
                             )}
 
                             {activeTab === 'investment' && (
-                                <motion.div
+                                <TabContent
                                     key="investment"
                                     className="space-y-6"
-                                    variants={tabVariants}
-                                    initial="in"
-                                    animate="active"
-                                    exit="out"
-                                    transition={quick}
+                                    {...(!reduceMotion && { variants: tabVariants, initial: 'in', animate: 'active', exit: 'out', transition: quick })}
                                 >
                                     <div>
                                         <h2 className="text-lg font-bold barlow-condensed-semibold text-gray-900 mb-4 ml-1">
                                             2026 Rates
                                         </h2>
-                                        <motion.div
+                                        <Card
                                             className="grid gap-4 sm:grid-cols-2"
-                                            variants={cardStagger}
-                                            initial="in"
-                                            animate="active"
+                                            {...(!reduceMotion && { variants: cardStagger, initial: 'in', animate: 'active' })}
                                         >
-                                            <motion.div variants={cardItem} transition={quick} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm hover:bg-amber-50/30 hover:border-amber-300 hover:shadow-md transition-all duration-300 hover:scale-[1.01]">
+                                            <Card className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm hover:bg-amber-50/30 hover:border-amber-300 hover:shadow-md transition-all duration-300 hover:scale-[1.01]" {...(!reduceMotion && { variants: cardItem, transition: quick })}>
                                                 <p className="text-sm font-semibold uppercase tracking-wide text-[#b59100]">1 Month</p>
                                                 <p className="mt-1 text-2xl font-bold text-gray-900">$3,500<span className="text-sm font-normal text-gray-500">/mo</span></p>
                                                 <p className="mt-2 text-sm text-gray-600">—</p>
                                                 <p className="mt-2 text-sm text-gray-700">Product launches, announcements, short-term visibility</p>
-                                            </motion.div>
-                                            <motion.div variants={cardItem} transition={quick} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm hover:bg-amber-50/30 hover:border-amber-300 hover:shadow-md transition-all duration-300 hover:scale-[1.01]">
+                                            </Card>
+                                            <Card className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm hover:bg-amber-50/30 hover:border-amber-300 hover:shadow-md transition-all duration-300 hover:scale-[1.01]" {...(!reduceMotion && { variants: cardItem, transition: quick })}>
                                                 <p className="text-sm font-semibold uppercase tracking-wide text-[#b59100]">3 Months</p>
                                                 <p className="mt-1 text-2xl font-bold text-gray-900">$3,250<span className="text-sm font-normal text-gray-500">/mo</span></p>
                                                 <p className="mt-2 text-sm text-gray-600">$9,750 annual equivalent</p>
                                                 <p className="mt-2 text-sm text-gray-700">Sustained awareness and retailer familiarity</p>
-                                            </motion.div>
-                                            <motion.div variants={cardItem} transition={quick} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm hover:bg-amber-50/30 hover:border-amber-300 hover:shadow-md transition-all duration-300 hover:scale-[1.01]">
+                                            </Card>
+                                            <Card className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm hover:bg-amber-50/30 hover:border-amber-300 hover:shadow-md transition-all duration-300 hover:scale-[1.01]" {...(!reduceMotion && { variants: cardItem, transition: quick })}>
                                                 <p className="text-sm font-semibold uppercase tracking-wide text-[#b59100]">6 Months</p>
                                                 <p className="mt-1 text-2xl font-bold text-gray-900">$3,000<span className="text-sm font-normal text-gray-500">/mo</span></p>
                                                 <p className="mt-2 text-sm text-gray-600">$18,000 annual equivalent</p>
                                                 <p className="mt-2 text-sm text-gray-700">Strong market presence and brand reinforcement</p>
-                                            </motion.div>
-                                            <motion.div variants={cardItem} transition={quick} className="rounded-xl border-2 border-gray-200 bg-white p-4 shadow-sm hover:bg-amber-50/30 hover:border-amber-300 hover:shadow-md transition-all duration-300 hover:scale-[1.01]">
+                                            </Card>
+                                            <Card className="rounded-xl border-2 border-gray-200 bg-white p-4 shadow-sm hover:bg-amber-50/30 hover:border-amber-300 hover:shadow-md transition-all duration-300 hover:scale-[1.01]" {...(!reduceMotion && { variants: cardItem, transition: quick })}>
                                                 <p className="text-sm font-semibold uppercase tracking-wide text-[#b59100]">12 Months</p>
                                                 <p className="mt-1 text-2xl font-bold text-gray-900">$2,500<span className="text-sm font-normal text-gray-500">/mo</span></p>
                                                 <p className="mt-2 text-sm text-gray-600">$30,000 annual equivalent</p>
                                                 <p className="mt-2 text-sm text-gray-700">Category leadership and long-term industry positioning</p>
-                                            </motion.div>
-                                        </motion.div>
+                                            </Card>
+                                        </Card>
                                         <p className="mt-4 text-gray-700 text-md leading-relaxed">
                                             A one-year partnership offers the greatest strategic advantage, positioning your brand as a consistent and trusted voice within the retail community.
                                         </p>
@@ -215,18 +206,14 @@ export default function BrandPartnerships({ brands = [], personalities = [] }) {
                                             Most importantly, partners help fuel a knowledge-driven community where better information leads to stronger retail outcomes.
                                         </p>
                                     </div>
-                                </motion.div>
+                                </TabContent>
                             )}
 
                             {activeTab === 'emerging' && (
-                                <motion.div
+                                <TabContent
                                     key="emerging"
                                     className="space-y-6 text-gray-700 leading-relaxed"
-                                    variants={tabVariants}
-                                    initial="in"
-                                    animate="active"
-                                    exit="out"
-                                    transition={quick}
+                                    {...(!reduceMotion && { variants: tabVariants, initial: 'in', animate: 'active', exit: 'out', transition: quick })}
                                 >
                                     <div>
                                         <h2 className="text-lg font-bold barlow-condensed-semibold text-gray-900 mb-3">
@@ -249,44 +236,36 @@ export default function BrandPartnerships({ brands = [], personalities = [] }) {
                                     <div>
                                         <h3 className="text-base font-semibold text-gray-900 mb-3">Emerging Brand Rate Card</h3>
                                         <div className="grid gap-4 sm:grid-cols-2">
-                                            <motion.div
-                                                variants={cardItem}
-                                                initial="in"
-                                                animate="active"
-                                                transition={quick}
+                                            <Card
                                                 className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm hover:bg-amber-50/30 hover:border-amber-300 hover:shadow-md transition-all duration-300 hover:scale-[1.01]"
+                                                {...(!reduceMotion && { variants: cardItem, initial: 'in', animate: 'active', transition: quick })}
                                             >
                                                 <p className="text-sm font-semibold uppercase tracking-wide text-[#b59100]">Month-to-Month</p>
                                                 <p className="mt-1 text-2xl font-bold text-gray-900">$1,500<span className="text-sm font-normal text-gray-500">/mo</span></p>
                                                 <p className="mt-2 text-sm text-gray-700">Early exposure and initial retailer awareness</p>
-                                            </motion.div>
-                                            <motion.div
-                                                variants={cardItem}
-                                                initial="in"
-                                                animate="active"
-                                                transition={quick}
+                                            </Card>
+                                            <Card
                                                 className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm hover:bg-amber-50/30 hover:border-amber-300 hover:shadow-md transition-all duration-300 hover:scale-[1.01]"
+                                                {...(!reduceMotion && { variants: cardItem, initial: 'in', animate: 'active', transition: quick })}
                                             >
                                                 <p className="text-sm font-semibold uppercase tracking-wide text-[#b59100]">6+ Month Commitment</p>
                                                 <p className="mt-1 text-2xl font-bold text-gray-900">$1,000<span className="text-sm font-normal text-gray-500">/mo</span></p>
                                                 <p className="mt-2 text-sm text-gray-700">Building recognition and long-term credibility</p>
-                                            </motion.div>
+                                            </Card>
                                         </div>
                                         <p className="mt-4 text-sm text-gray-700 leading-relaxed">
                                             Availability within this tier is intentionally limited to preserve category quality and ensure meaningful exposure for participating brands.
                                         </p>
                                     </div>
-                                </motion.div>
+                                </TabContent>
                             )}
                             </AnimatePresence>
                         </div>
 
                         {/* Fixed contact bar at bottom of card */}
-                        <motion.div
+                        <Div
                             className="shrink-0 border-t border-gray-200 bg-gray-50/80 px-6 sm:px-8 py-4"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ duration: 0.25, delay: 0.15 }}
+                            {...(!reduceMotion && { initial: { opacity: 0 }, animate: { opacity: 1 }, transition: { duration: 0.25, delay: 0.15 } })}
                         >
                             {brands.length > 0 && (
                                 <p className="mb-2 text-xs text-gray-500">
@@ -301,9 +280,9 @@ export default function BrandPartnerships({ brands = [], personalities = [] }) {
                             >
                                 brandpartnerships@brucewcole.com
                             </a></p>
-                        </motion.div>
-                    </motion.div>
-                </motion.div>
+                        </Div>
+                    </Div>
+                </Div>
 
                 <HeroNav />
             </section>

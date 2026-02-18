@@ -1,6 +1,7 @@
 import VideoCard from '@/Components/VideoCard';
 import HeroNav from '@/Components/HeroNav';
 import HomeLayout from '@/Layouts/HomeLayout';
+import { useReduceMotion } from '@/hooks/useReduceMotion';
 import { Head, Link, router } from '@inertiajs/react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -73,6 +74,10 @@ export default function Episodes({
     filters = {},
     pagination,
 }) {
+    const reduceMotion = useReduceMotion();
+    const Section = reduceMotion ? 'section' : motion.section;
+    const Div = reduceMotion ? 'div' : motion.div;
+    const Nav = reduceMotion ? 'nav' : motion.nav;
     const currentPage = pagination?.current_page ?? 1;
     const lastPage = pagination?.last_page ?? 1;
     const total = pagination?.total ?? 0;
@@ -162,11 +167,9 @@ export default function Episodes({
         <HomeLayout>
             <Head title={pageTitle} />
             <div className="relative min-h-screen w-full max-w-7xl mx-auto flex flex-col px-4 sm:px-6 lg:px-8 py-16 md:py-20 mt-0 md:mt-8">
-                <motion.section
+                <Section
                     className="flex flex-col gap-4 md:gap-8"
-                    initial="hidden"
-                    animate="visible"
-                    variants={containerVariants}
+                    {...(!reduceMotion && { initial: 'hidden', animate: 'visible', variants: containerVariants })}
                 >
                     {/* Tabs */}
                     <nav className="flex ml-auto md:ml-0 gap-1 p-1 rounded-xl bg-gray-100 border border-gray-200 max-w-max" aria-label="All videos, episodes, clips and sponsor videos">
@@ -271,9 +274,9 @@ export default function Episodes({
                     </div>
 
                     {list.length === 0 ? (
-                        <motion.div
+                        <Div
                             className="mt-4 flex flex-col items-center justify-center py-20 px-6 rounded-2xl border-2 border-dashed border-amber-200 bg-amber-50/30 max-w-xl mx-auto w-full"
-                            variants={itemVariants}
+                            {...(!reduceMotion && { variants: itemVariants })}
                         >
                             <p className="text-xl md:text-2xl font-semibold barlow-condensed-semibold text-amber-900 tracking-wide">
                                 {searchFromServer ? 'No results' : 'Coming soon'}
@@ -289,12 +292,12 @@ export default function Episodes({
                                             ? 'No videos yet. Check back soon.'
                                         : 'New episodes are on the way. Check back soon.'}
                             </p>
-                        </motion.div>
+                        </Div>
                     ) : (
                         <>
                             <div className="grid grid-cols-1 gap-6 w-full max-w-full">
                                 {list.map((video, index) => (
-                                    <motion.div key={video.id ?? video.slug ?? index} variants={itemVariants}>
+                                    <Div key={video.id ?? video.slug ?? index} {...(!reduceMotion && { variants: itemVariants })}>
                                         <VideoCard
                                             video_data={video}
                                             href={
@@ -318,14 +321,14 @@ export default function Episodes({
                                                         : 'View Podcast'
                                             }
                                         />
-                                    </motion.div>
+                                    </Div>
                                 ))}
                             </div>
 
                             {lastPage > 1 && (
-                                <motion.nav
+                                <Nav
                                     className="flex flex-wrap items-center justify-center gap-2 pt-6 pb-4"
-                                    variants={itemVariants}
+                                    {...(!reduceMotion && { variants: itemVariants })}
                                     aria-label={`${pageTitle} pagination`}
                                 >
                                     {links.map((link, i) => {
@@ -360,7 +363,7 @@ export default function Episodes({
                                             </Link>
                                         );
                                     })}
-                                </motion.nav>
+                                </Nav>
                             )}
 
                             {total > 0 && (
@@ -370,7 +373,7 @@ export default function Episodes({
                             )}
                         </>
                     )}
-                </motion.section>
+                </Section>
             </div>
             <HeroNav position="top" />
         </HomeLayout>

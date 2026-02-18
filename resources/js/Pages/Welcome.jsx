@@ -2,6 +2,7 @@ import HeroVideoBackground from '@/Components/HeroVideoBackground';
 import HeroNav from '@/Components/HeroNav';
 import RecentVideos from '@/Components/RecentVideos';
 import HomeLayout from '@/Layouts/HomeLayout';
+import { useReduceMotion } from '@/hooks/useReduceMotion';
 import { Head, Link } from '@inertiajs/react';
 import { motion } from 'framer-motion';
 
@@ -15,30 +16,28 @@ const heroTextVariants = {
 };
 
 export default function Welcome({ videos = [] }) {
+    const reduceMotion = useReduceMotion();
+    const H2 = reduceMotion ? 'h2' : motion.h2;
+    const H1 = reduceMotion ? 'h1' : motion.h1;
+
     return (
         <HomeLayout>
             <Head title="Welcome" />
             <section className="relative h-[75vh] md:h-screen overflow-hidden flex flex-col">
                 <HeroVideoBackground parallax />
                 <div className="absolute inset-0 w-full max-w-7xl mx-auto flex flex-col items-center justify-center gap-2 z-10 pointer-events-none mt-[-100px] pt-10 md:pt-0">
-                    <motion.h2
+                    <H2
                         className="hero-top-text text-[#ffde59] plus-jakarta-sans-700"
-                        custom={0}
-                        variants={heroTextVariants}
-                        initial="hidden"
-                        animate="visible"
+                        {...(!reduceMotion && { custom: 0, variants: heroTextVariants, initial: 'hidden', animate: 'visible' })}
                     >
                         PODCAST
-                    </motion.h2>
-                    <motion.h1
+                    </H2>
+                    <H1
                         className="text-5xl font-bold text-white drop-shadow-lg hero-main-text text-center max-w-4xl anton-regular"
-                        custom={1}
-                        variants={heroTextVariants}
-                        initial="hidden"
-                        animate="visible"
+                        {...(!reduceMotion && { custom: 1, variants: heroTextVariants, initial: 'hidden', animate: 'visible' })}
                     >
                         IN<br />CONVERSATION<br />WITH<br />BRUCE W. COLE
-                    </motion.h1>
+                    </H1>
                 </div>
 
                 <HeroNav />

@@ -1,4 +1,5 @@
 import VideoCard from '@/Components/VideoCard';
+import { useReduceMotion } from '@/hooks/useReduceMotion';
 import { usePage } from '@inertiajs/react';
 import { motion } from 'framer-motion';
 import { useCallback, useState } from 'react';
@@ -21,7 +22,11 @@ const itemVariants = {
 };
 
 export default function RecentVideos({ title = 'EPISODES', episodes = [] }) {
+    const reduceMotion = useReduceMotion();
     const { props } = usePage();
+    const Section = reduceMotion ? 'section' : motion.section;
+    const Div = reduceMotion ? 'div' : motion.div;
+    const H2 = reduceMotion ? 'h2' : motion.h2;
     const initialVideos = props.videos || [];
     const initialNextPage = props.nextPage ?? null;
     const initialHasMore = props.hasMore ?? false;
@@ -51,46 +56,43 @@ export default function RecentVideos({ title = 'EPISODES', episodes = [] }) {
     }, [nextPage, loading]);
 
     return (
-        <motion.section
+        <Section
             className="relative h-auto overflow-hidden w-full max-w-7xl mx-auto flex flex-col items-center justify-center py-6 px-4 sm:px-6 lg:px-8 mb-12"
             id="episodes"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={containerVariants}
+            {...(!reduceMotion && { initial: 'hidden', whileInView: 'visible', viewport: { once: true, amount: 0.12, margin: '60px 0px' }, variants: containerVariants })}
         >
-            <motion.h2
+            <H2
                 className="text-4xl md:text-5xl font-bold barlow-condensed-semibold mb-12 w-full text-center"
-                variants={itemVariants}
+                {...(!reduceMotion && { variants: itemVariants })}
             >
                 {title}
-            </motion.h2>
+            </H2>
 
             {videos.length === 0 ? (
-                <motion.div
+                <Div
                     className="flex flex-col items-center justify-center py-16 px-6 rounded-2xl border-2 border-dashed border-amber-200 bg-amber-50/30 max-w-xl mx-auto w-full"
-                    variants={itemVariants}
+                    {...(!reduceMotion && { variants: itemVariants })}
                 >
                     <p className="text-2xl md:text-3xl font-semibold barlow-condensed-semibold text-gray-600 tracking-wide">
                         Launching Soon
                     </p>
                     <p className="mt-3 text-gray-600 text-center text-sm md:text-base leading-relaxed max-w-sm">New episodes are on the way. Check back soon.</p>
-                </motion.div>
+                </Div>
             ) : (
                 <>
-                    <motion.div
+                    <Div
                         className="grid grid-cols-1 gap-6 w-full max-w-full"
-                        variants={containerVariants}
+                        {...(!reduceMotion && { variants: containerVariants })}
                     >
                         {videos.map((video, index) => (
-                            <motion.div key={video.id ?? video.slug ?? index} variants={itemVariants}>
+                            <Div key={video.id ?? video.slug ?? index} {...(!reduceMotion && { variants: itemVariants })}>
                                 <VideoCard video_data={video} />
-                            </motion.div>
+                            </Div>
                         ))}
-                    </motion.div>
+                    </Div>
 
                     {hasMore && (
-                        <motion.div className="mt-10 flex flex-col items-center gap-4" variants={itemVariants}>
+                        <Div className="mt-10 flex flex-col items-center gap-4" {...(!reduceMotion && { variants: itemVariants })}>
                             {loading ? (
                                 <div className="flex flex-col items-center gap-3 text-gray-600">
                                     <div className="h-10 w-10 border-2 border-[#ffde59] border-t-transparent rounded-full animate-spin" />
@@ -105,10 +107,10 @@ export default function RecentVideos({ title = 'EPISODES', episodes = [] }) {
                                     Load more
                                 </button>
                             )}
-                        </motion.div>
+                        </Div>
                     )}
                 </>
             )}
-        </motion.section>
+        </Section>
     );
 }

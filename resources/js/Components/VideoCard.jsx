@@ -1,3 +1,4 @@
+import { useReduceMotion } from '@/hooks/useReduceMotion';
 import { Link } from '@inertiajs/react';
 import { motion } from 'framer-motion';
 import { useState } from 'react';
@@ -17,10 +18,13 @@ function formatDatePosted(createdAt) {
 const yellowShadow = '0 4px 32px 0 #ffde5966, 0 1.5px 8px 0 rgba(0,0,0,0.09)';
 
 export default function VideoCard({ video_data, href, actionLabel = 'View Podcast' }) {
+    const reduceMotion = useReduceMotion();
     const thumbnailUrl = video_data.thumbnail_url || '/assets/images/video-placeholder.png';
     const datePosted = formatDatePosted(video_data.created_at);
     const linkUrl = href ?? route('episode', { slug: video_data.slug });
     const [isPortrait, setIsPortrait] = useState(null);
+    const Article = reduceMotion ? 'article' : motion.article;
+    const ThumbWrap = reduceMotion ? 'div' : motion.div;
 
     const handleImageLoad = (e) => {
         const img = e.target;
@@ -31,22 +35,18 @@ export default function VideoCard({ video_data, href, actionLabel = 'View Podcas
 
     return (
         <Link href={linkUrl} className="block w-full group">
-            <motion.article
+            <Article
                 className="relative w-full bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden flex flex-col sm:flex-row sm:max-h-[235px] min-h-0 transition-shadow duration-300"
-                whileHover={{
-                    y: -4,
-                    boxShadow: yellowShadow,
-                    transition: { duration: 0.25, ease: [0.22, 1, 0.36, 1] }
-                }}
-                transition={{ duration: 0.3 }}
-                style={{ willChange: 'transform, box-shadow' }}
+                {...(!reduceMotion && {
+                    whileHover: { y: -4, boxShadow: yellowShadow, transition: { duration: 0.25, ease: [0.22, 1, 0.36, 1] } },
+                    transition: { duration: 0.3 },
+                })}
             >
                 {/* Thumbnail - full width on mobile, wider on desktop; landscape box; portrait = contain + blurred bg */}
                 <div className="sm:w-96 sm:min-w-[24rem] lg:w-[28rem] lg:min-w-[28rem] flex-shrink-0 overflow-hidden rounded-l-none rounded-t-xl sm:rounded-t-none sm:rounded-l-xl">
-                    <motion.div
+                    <ThumbWrap
                         className="relative aspect-video sm:aspect-auto sm:h-full w-full max-h-[224px] sm:max-h-[235px] overflow-hidden flex-shrink-0"
-                        whileHover={{ scale: 1.03 }}
-                        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                        {...(!reduceMotion && { whileHover: { scale: 1.03 }, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } })}
                     >
                         {isPortrait && (
                             <div
@@ -64,7 +64,7 @@ export default function VideoCard({ video_data, href, actionLabel = 'View Podcas
                             onLoad={handleImageLoad}
                             className={`w-full h-full relative z-10 ${isPortrait ? 'object-contain' : 'object-cover'}`}
                         />
-                    </motion.div>
+                    </ThumbWrap>
                 </div>
 
                 {/* Content - title and description start at top, View Podcast at bottom right */}
@@ -102,7 +102,7 @@ export default function VideoCard({ video_data, href, actionLabel = 'View Podcas
                         </span>
                     </div>
                 </div>
-            </motion.article>
+            </Article>
         </Link>
     );
 }

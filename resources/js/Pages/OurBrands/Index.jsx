@@ -1,5 +1,6 @@
 import HeroNav from '@/Components/HeroNav';
 import HomeLayout from '@/Layouts/HomeLayout';
+import { useReduceMotion } from '@/hooks/useReduceMotion';
 import { Head, Link, router } from '@inertiajs/react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -54,6 +55,10 @@ function paginationLinkContent(link) {
 }
 
 export default function BrandsIndex({ brands = [], filters = {}, pagination }) {
+    const reduceMotion = useReduceMotion();
+    const Section = reduceMotion ? 'section' : motion.section;
+    const Div = reduceMotion ? 'div' : motion.div;
+    const Nav = reduceMotion ? 'nav' : motion.nav;
     const currentPage = pagination?.current_page ?? 1;
     const lastPage = pagination?.last_page ?? 1;
     const total = pagination?.total ?? 0;
@@ -103,17 +108,15 @@ export default function BrandsIndex({ brands = [], filters = {}, pagination }) {
             <Head title="Our Brands" />
 
             <div className="relative min-h-screen w-full max-w-7xl mx-auto flex flex-col px-4 sm:px-6 lg:px-8 py-16 md:py-20 mt-0 md:mt-8">
-                <motion.section
+                <Section
                     className="flex flex-col gap-4 md:gap-8"
-                    initial="hidden"
-                    animate="visible"
-                    variants={containerVariants}
+                    {...(!reduceMotion && { initial: 'hidden', animate: 'visible', variants: containerVariants })}
                 >
-                    <motion.div className="flex items-center justify-between gap-3" variants={itemVariants}>
+                    <Div className="flex items-center justify-between gap-3" {...(!reduceMotion && { variants: itemVariants })}>
                         <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 barlow-condensed-semibold">Our Brands</h1>
-                    </motion.div>
+                    </Div>
 
-                    <motion.div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between" variants={itemVariants}>
+                    <Div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between" {...(!reduceMotion && { variants: itemVariants })}>
                         <div className="relative flex-1 max-w-md">
                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -146,12 +149,12 @@ export default function BrandsIndex({ brands = [], filters = {}, pagination }) {
                                 ))}
                             </select>
                         </div>
-                    </motion.div>
+                    </Div>
 
                     {brands.length === 0 ? (
-                        <motion.div
+                        <Div
                             className="flex flex-col items-center justify-center py-20 px-6 rounded-2xl border-2 border-dashed border-amber-200 bg-amber-50/30 max-w-xl mx-auto w-full"
-                            variants={itemVariants}
+                            {...(!reduceMotion && { variants: itemVariants })}
                         >
                             <p className="text-xl md:text-2xl font-semibold barlow-condensed-semibold text-amber-900 tracking-wide">
                                 {searchFromServer ? 'No results' : 'Coming soon'}
@@ -159,12 +162,12 @@ export default function BrandsIndex({ brands = [], filters = {}, pagination }) {
                             <p className="mt-2 text-gray-600 text-center text-sm md:text-base">
                                 {searchFromServer ? 'No brands match your search. Try different keywords.' : 'Brands will appear here soon.'}
                             </p>
-                        </motion.div>
+                        </Div>
                     ) : (
                         <>
                             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 w-full max-w-full">
                                 {brands.map((brand) => (
-                                    <motion.div key={brand.id} variants={itemVariants}>
+                                    <Div key={brand.id} {...(!reduceMotion && { variants: itemVariants })}>
                                         <Link
                                             href={route('our-brands-show', brand.id)}
                                             className="group block overflow-hidden rounded-xl border border-gray-200 bg-white shadow-md transition-all hover:border-amber-300 hover:shadow-lg"
@@ -192,14 +195,14 @@ export default function BrandsIndex({ brands = [], filters = {}, pagination }) {
                                                 </p>
                                             </div>
                                         </Link>
-                                    </motion.div>
+                                    </Div>
                                 ))}
                             </div>
 
                             {lastPage > 1 && (
-                                <motion.nav
+                                <Nav
                                     className="flex flex-wrap items-center justify-center gap-2 pt-6 pb-4"
-                                    variants={itemVariants}
+                                    {...(!reduceMotion && { variants: itemVariants })}
                                     aria-label="Our Brands pagination"
                                 >
                                     {links.map((link, i) => {
@@ -234,7 +237,7 @@ export default function BrandsIndex({ brands = [], filters = {}, pagination }) {
                                             </Link>
                                         );
                                     })}
-                                </motion.nav>
+                                </Nav>
                             )}
 
                             {total > 0 && (
@@ -244,7 +247,7 @@ export default function BrandsIndex({ brands = [], filters = {}, pagination }) {
                             )}
                         </>
                     )}
-                </motion.section>
+                </Section>
             </div>
 
             <HeroNav position="top" />

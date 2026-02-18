@@ -1,3 +1,4 @@
+import { useReduceMotion } from '@/hooks/useReduceMotion';
 import { Link, usePage } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
@@ -40,11 +41,14 @@ function isCurrentItem(item, url) {
 }
 
 export default function HeroNav({ position = 'bottom' }) {
+    const reduceMotion = useReduceMotion();
     const { url } = usePage();
     const [stuck, setStuck] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
     const navRef = useRef(null);
     const isTopNav = position === 'top';
+    const Span = reduceMotion ? 'span' : motion.span;
+    const MotionDiv = reduceMotion ? 'div' : motion.div;
 
     useEffect(() => {
         if (isTopNav) return;
@@ -83,20 +87,20 @@ export default function HeroNav({ position = 'bottom' }) {
                     aria-label={menuOpen ? 'Close menu' : 'Open menu'}
                     aria-expanded={menuOpen}
                 >
-                    <motion.span
+                    <Span
                         className="block h-0.5 w-5 bg-current rounded-full origin-center"
-                        animate={menuOpen ? { rotate: 45, y: 6 } : { rotate: 0, y: 0 }}
-                        transition={{ duration: 0.2 }}
+                        style={reduceMotion && menuOpen ? { transform: 'rotate(45deg) translateY(6px)' } : undefined}
+                        {...(!reduceMotion && { animate: menuOpen ? { rotate: 45, y: 6 } : { rotate: 0, y: 0 }, transition: { duration: 0.2 } })}
                     />
-                    <motion.span
+                    <Span
                         className="block h-0.5 w-5 bg-current rounded-full"
-                        animate={menuOpen ? { opacity: 0, scaleX: 0 } : { opacity: 1, scaleX: 1 }}
-                        transition={{ duration: 0.2 }}
+                        style={reduceMotion ? { opacity: menuOpen ? 0 : 1, transform: menuOpen ? 'scaleX(0)' : 'scaleX(1)' } : undefined}
+                        {...(!reduceMotion && { animate: menuOpen ? { opacity: 0, scaleX: 0 } : { opacity: 1, scaleX: 1 }, transition: { duration: 0.2 } })}
                     />
-                    <motion.span
+                    <Span
                         className="block h-0.5 w-5 bg-current rounded-full origin-center"
-                        animate={menuOpen ? { rotate: -45, y: -6 } : { rotate: 0, y: 0 }}
-                        transition={{ duration: 0.2 }}
+                        style={reduceMotion && menuOpen ? { transform: 'rotate(-45deg) translateY(-6px)' } : undefined}
+                        {...(!reduceMotion && { animate: menuOpen ? { rotate: -45, y: -6 } : { rotate: 0, y: 0 }, transition: { duration: 0.2 } })}
                     />
                 </button>
             </div>
@@ -105,21 +109,27 @@ export default function HeroNav({ position = 'bottom' }) {
             <AnimatePresence>
                 {menuOpen && (
                     <>
-                        <motion.div
+                        <MotionDiv
                             className="fixed inset-0 bg-black/60 backdrop-blur-sm z-20 md:hidden"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            transition={{ duration: 0.2 }}
+                            style={reduceMotion ? {} : undefined}
+                            {...(!reduceMotion && {
+                                initial: { opacity: 0 },
+                                animate: { opacity: 1 },
+                                exit: { opacity: 0 },
+                                transition: { duration: 0.2 },
+                            })}
                             onClick={() => setMenuOpen(false)}
                             aria-hidden="true"
                         />
-                        <motion.div
+                        <MotionDiv
                             className="fixed top-0 left-0 bottom-0 w-72 max-w-[85vw] bg-black/95 backdrop-blur-md shadow-2xl z-20 md:hidden flex flex-col pt-20 px-6 pb-8"
-                            initial={{ x: -280 }}
-                            animate={{ x: 0 }}
-                            exit={{ x: -280 }}
-                            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                            style={reduceMotion ? {} : undefined}
+                            {...(!reduceMotion && {
+                                initial: { x: -280 },
+                                animate: { x: 0 },
+                                exit: { x: -280 },
+                                transition: { type: 'spring', damping: 25, stiffness: 200 },
+                            })}
                         >
                             <div className="flex flex-col flex-1">
                                 {navItems.map((item) => {
@@ -151,7 +161,7 @@ export default function HeroNav({ position = 'bottom' }) {
                             >
                                 hello@brucewcole.com
                             </a>
-                        </motion.div>
+                        </MotionDiv>
                     </>
                 )}
             </AnimatePresence>
@@ -184,11 +194,9 @@ export default function HeroNav({ position = 'bottom' }) {
                                 {item.name}
                             </Link>
                             {current && (
-                                <motion.div
+                                <MotionDiv
                                     className="w-3/4 h-[4px] mt-2 rounded-full bg-[#ffde59] shadow-[0_2px_7px_#ffde59aa]"
                                     style={{ boxShadow: '0 2px 10px #ffde59cc' }}
-                                    layoutId="heroNavIndicator"
-                                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                                 />
                             )}
                         </div>

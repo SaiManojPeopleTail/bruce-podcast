@@ -2,10 +2,14 @@ import HeroVideoBackground from '@/Components/HeroVideoBackground';
 import HeroNav from '@/Components/HeroNav';
 import RecentVideos from '@/Components/RecentVideos';
 import HomeLayout from '@/Layouts/HomeLayout';
+import { useReduceMotion } from '@/hooks/useReduceMotion';
 import { Head, Link } from '@inertiajs/react';
 import { motion } from 'framer-motion';
 
 export default function About() {
+    const reduceMotion = useReduceMotion();
+    const Div = reduceMotion ? 'div' : motion.div;
+
     return (
         <HomeLayout>
             <Head title="Meet Bruce" />
@@ -13,17 +17,21 @@ export default function About() {
             <section className="relative min-h-screen overflow-hidden flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 py-16 pb-28">
                 <HeroVideoBackground />
                 <div className="absolute inset-0 bg-black/50 z-0" />
-                <motion.div
+                <Div
                     className="relative z-10 w-full max-w-7xl"
-                    initial={{ opacity: 0, y: 28 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                    {...(!reduceMotion && {
+                        initial: { opacity: 0, y: 28 },
+                        animate: { opacity: 1, y: 0 },
+                        transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] },
+                    })}
                 >
-                    <motion.div
+                    <Div
                         className="relative bg-white/95 backdrop-blur rounded-2xl shadow-2xl p-6 sm:p-8 lg:p-10"
-                        initial={{ opacity: 0, scale: 0.98 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.5, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+                        {...(!reduceMotion && {
+                            initial: { opacity: 0, scale: 0.98 },
+                            animate: { opacity: 1, scale: 1 },
+                            transition: { duration: 0.5, delay: 0.1, ease: [0.22, 1, 0.36, 1] },
+                        })}
                     >
                         <Link
                             href={route('welcome')}
@@ -73,8 +81,8 @@ export default function About() {
                                 </div>
                             </div>
                         </div>
-                    </motion.div>
-                </motion.div>
+                    </Div>
+                </Div>
 
                 <HeroNav />
             </section>

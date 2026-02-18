@@ -1,3 +1,4 @@
+import { useReduceMotion } from '@/hooks/useReduceMotion';
 import { ChevronLeft, ChevronRight, Pause, Play, Volume2, VolumeX } from 'lucide-react';
 import { LayoutGroup, motion } from 'framer-motion';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -35,6 +36,8 @@ function getLayoutId(slotName, item, len) {
 }
 
 export default function GalleryOfPersonalities({ people = [], className = '' }) {
+    const reduceMotion = useReduceMotion();
+    const Card = reduceMotion ? 'div' : motion.div;
     const items = useMemo(() => normalizePeople(people), [people]);
     const [current, setCurrent] = useState(0);
     const [isInView, setIsInView] = useState(false);
@@ -43,6 +46,23 @@ export default function GalleryOfPersonalities({ people = [], className = '' }) 
 
     const sectionRef = useRef(null);
     const centerVideoRef = useRef(null);
+    const touchStartRef = useRef({ x: 0, y: 0 });
+
+    const SWIPE_THRESHOLD = 50;
+
+    const handleTouchStart = (e) => {
+        const t = e.touches[0];
+        touchStartRef.current = { x: t.clientX, y: t.clientY };
+    };
+
+    const handleTouchEnd = (e) => {
+        const t = e.changedTouches[0];
+        const dx = t.clientX - touchStartRef.current.x;
+        const dy = t.clientY - touchStartRef.current.y;
+        if (Math.abs(dx) <= SWIPE_THRESHOLD || Math.abs(dx) < Math.abs(dy)) return;
+        if (dx < 0) next();
+        else prev();
+    };
 
     const indexById = useMemo(() => {
         const map = new Map();
@@ -108,24 +128,25 @@ export default function GalleryOfPersonalities({ people = [], className = '' }) 
     };
 
     const slots = buildSlots(items, current);
+    const cardProps = (slotName, item) =>
+        reduceMotion ? {} : { layoutId: getLayoutId(slotName, item, len), transition: { type: 'spring', stiffness: 260, damping: 28 } };
     const arrowClass =
         'inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-sm hover:bg-amber-50 hover:border-amber-300 hover:text-amber-800 transition-colors';
 
     return (
         <div ref={sectionRef} className={className}>
             <LayoutGroup>
-                <div className="grid grid-cols-1 items-center gap-4 md:grid-cols-[1fr_1.4fr_1fr]">
-                    <div className="order-2 md:order-1">
+                {/* Mobile: show only center card. Desktop (md+): show all three */}
+                <div className="flex flex-col md:grid md:grid-cols-[1fr_1.4fr_1fr] items-center gap-4">
+                    {/* Left - only on md+ */}
+                    <div className="hidden md:block order-2 md:order-1">
                         <button
                             type="button"
                             onClick={() => goTo(slots.left.id)}
                             className="relative w-full overflow-hidden rounded-xl border border-gray-200 shadow-sm text-left"
                             aria-label={`Show ${slots.left.name}`}
                         >
-                            <motion.div
-                                layoutId={getLayoutId('left', slots.left, len)}
-                                transition={{ type: 'spring', stiffness: 260, damping: 28 }}
-                            >
+                            <Card {...cardProps('left', slots.left)}>
                                 <video
                                     src={slots.left.video_url}
                                     muted
@@ -137,15 +158,17 @@ export default function GalleryOfPersonalities({ people = [], className = '' }) 
                                 <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent px-3 py-2">
                                     <p className="text-sm font-semibold text-white">{slots.left.name}</p>
                                 </div>
-                            </motion.div>
+                            </Card>
                         </button>
                     </div>
 
-                    <div className="order-1 md:order-2 group relative overflow-hidden rounded-xl border border-amber-300 shadow-md">
-                        <motion.div
-                            layoutId={getLayoutId('center', slots.center, len)}
-                            transition={{ type: 'spring', stiffness: 260, damping: 28 }}
-                        >
+                    {/* Center - always visible; swipe left/right on mobile to change */}
+                    <div
+                        className="order-1 md:order-2 group relative overflow-hidden rounded-xl border border-amber-300 shadow-md w-full touch-pan-y"
+                        onTouchStart={handleTouchStart}
+                        onTouchEnd={handleTouchEnd}
+                    >
+                        <Card {...cardProps('center', slots.center)}>
                             <video
                                 key={slots.center.id}
                                 ref={centerVideoRef}
@@ -156,11 +179,11 @@ export default function GalleryOfPersonalities({ people = [], className = '' }) 
                                 preload="metadata"
                                 className="h-48 md:h-64 w-full object-cover"
                             />
-                        </motion.div>
+                        </Card>
                         <button
                             type="button"
                             onClick={() => setIsPlaying((v) => !v)}
-                            className="absolute inset-0 m-auto h-12 w-12 rounded-full bg-black/55 text-white flex items-center justify-center opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                            className="absolute inset-0 m-auto h-12 w-12 rounded-full bg-black/55 text-white flex items-center justify-center opacity-100 md:opacity-0 transition-opacity duration-200 group-hover:opacity-100"
                             aria-label={isPlaying ? 'Pause video' : 'Play video'}
                         >
                             {isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6" />}
@@ -168,27 +191,25 @@ export default function GalleryOfPersonalities({ people = [], className = '' }) 
                         <button
                             type="button"
                             onClick={() => setIsMuted((v) => !v)}
-                            className="absolute right-3 top-3 h-9 w-9 rounded-full bg-black/55 text-white flex items-center justify-center opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                            className="absolute right-3 top-3 h-9 w-9 rounded-full bg-black/55 text-white flex items-center justify-center opacity-100 md:opacity-0 transition-opacity duration-200 group-hover:opacity-100"
                             aria-label={isMuted ? 'Unmute video' : 'Mute video'}
                         >
                             {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
                         </button>
-                        <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-4 py-3 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                        <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-4 py-3 opacity-100 md:opacity-0 transition-opacity duration-200 group-hover:opacity-100">
                             <p className="text-base font-bold text-white">{slots.center.name}</p>
                         </div>
                     </div>
 
-                    <div className="order-3">
+                    {/* Right - only on md+ */}
+                    <div className="hidden md:block order-3">
                         <button
                             type="button"
                             onClick={() => goTo(slots.right.id)}
                             className="relative w-full overflow-hidden rounded-xl border border-gray-200 shadow-sm text-left"
                             aria-label={`Show ${slots.right.name}`}
                         >
-                            <motion.div
-                                layoutId={getLayoutId('right', slots.right, len)}
-                                transition={{ type: 'spring', stiffness: 260, damping: 28 }}
-                            >
+                            <Card {...cardProps('right', slots.right)}>
                                 <video
                                     src={slots.right.video_url}
                                     muted
@@ -200,12 +221,13 @@ export default function GalleryOfPersonalities({ people = [], className = '' }) 
                                 <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent px-3 py-2">
                                     <p className="text-sm font-semibold text-white">{slots.right.name}</p>
                                 </div>
-                            </motion.div>
+                            </Card>
                         </button>
                     </div>
                 </div>
             </LayoutGroup>
 
+            {/* Navigation arrows - always show, but you could hide on mobile if UX prefers */}
             <div className="mt-4 flex items-center justify-center gap-3">
                 <button type="button" onClick={prev} className={arrowClass} aria-label="Previous personality">
                     <ChevronLeft className="h-5 w-5" />

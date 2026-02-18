@@ -1,6 +1,7 @@
 import HeroNav from '@/Components/HeroNav';
 import VideoCard from '@/Components/VideoCard';
 import HomeLayout from '@/Layouts/HomeLayout';
+import { useReduceMotion } from '@/hooks/useReduceMotion';
 import { Head, Link, router } from '@inertiajs/react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -42,6 +43,10 @@ function paginationLinkContent(link) {
 }
 
 export default function BrandShow({ brand, videos, filters = {} }) {
+    const reduceMotion = useReduceMotion();
+    const Section = reduceMotion ? 'section' : motion.section;
+    const Div = reduceMotion ? 'div' : motion.div;
+    const Nav = reduceMotion ? 'nav' : motion.nav;
     const searchFromServer = filters.search || '';
     const sortFromServer = filters.sort || 'latest';
 
@@ -93,8 +98,8 @@ export default function BrandShow({ brand, videos, filters = {} }) {
             <Head title={`${brand?.name || 'Brand'} | Our Brands`} />
 
             <div className="relative min-h-screen w-full max-w-7xl mx-auto flex flex-col px-4 sm:px-6 lg:px-8 py-16 md:py-20 mt-0 md:mt-8">
-                <motion.section className="flex flex-col gap-4 md:gap-8" initial="hidden" animate="visible" variants={containerVariants}>
-                    <motion.div className="flex items-center justify-between gap-3" variants={itemVariants}>
+                <Section className="flex flex-col gap-4 md:gap-8" {...(!reduceMotion && { initial: 'hidden', animate: 'visible', variants: containerVariants })}>
+                    <Div className="flex items-center justify-between gap-3" {...(!reduceMotion && { variants: itemVariants })}>
                         <Link
                             href={route('our-brands-list')}
                             className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:border-amber-300 hover:bg-amber-50 hover:text-amber-900 transition-colors"
@@ -102,9 +107,9 @@ export default function BrandShow({ brand, videos, filters = {} }) {
                             <span aria-hidden>←</span>
                             Back to brands
                         </Link>
-                    </motion.div>
+                    </Div>
 
-                    <motion.div className="rounded-2xl bg-white" variants={itemVariants}>
+                    <Div className="rounded-2xl bg-white" {...(!reduceMotion && { variants: itemVariants })}>
                         <div className="grid grid-cols-1 gap-6 md:grid-cols-[320px_1fr] md:gap-8 items-start">
                             <div className="w-full overflow-hidden rounded-xl border border-gray-200 p-1 hidden md:block">
                                 {brand?.image_url ? (
@@ -118,9 +123,9 @@ export default function BrandShow({ brand, videos, filters = {} }) {
                                 <p className="mt-4 text-gray-700 leading-relaxed">{brand?.description || 'No description available.'}</p>
                             </div>
                         </div>
-                    </motion.div>
+                    </Div>
 
-                    <motion.div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between" variants={itemVariants}>
+                    <Div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between" {...(!reduceMotion && { variants: itemVariants })}>
                         <div className="relative flex-1 max-w-md">
                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -153,12 +158,12 @@ export default function BrandShow({ brand, videos, filters = {} }) {
                                 ))}
                             </select>
                         </div>
-                    </motion.div>
+                    </Div>
 
                     {list.length === 0 ? (
-                        <motion.div
+                        <Div
                             className="mt-4 flex flex-col items-center justify-center py-20 px-6 rounded-2xl border-2 border-dashed border-amber-200 bg-amber-50/30 max-w-xl mx-auto w-full"
-                            variants={itemVariants}
+                            {...(!reduceMotion && { variants: itemVariants })}
                         >
                             <p className="text-xl md:text-2xl font-semibold barlow-condensed-semibold text-amber-900 tracking-wide">
                                 {searchFromServer ? 'No results' : 'Coming soon'}
@@ -166,23 +171,23 @@ export default function BrandShow({ brand, videos, filters = {} }) {
                             <p className="mt-2 text-gray-600 text-center text-sm md:text-base">
                                 {searchFromServer ? 'No sponsor videos match your search. Try different keywords.' : 'No sponsor videos yet. Check back soon.'}
                             </p>
-                        </motion.div>
+                        </Div>
                     ) : (
-                        <motion.div className="grid grid-cols-1 gap-6 w-full max-w-full" variants={containerVariants}>
+                        <Div className="grid grid-cols-1 gap-6 w-full max-w-full" {...(!reduceMotion && { variants: containerVariants })}>
                             {list.map((video) => (
-                                <motion.div key={video.id} variants={itemVariants}>
+                                <Div key={video.id} {...(!reduceMotion && { variants: itemVariants })}>
                                     <VideoCard
                                         video_data={video}
                                         href={route('sponsor-video-show', { slug: video.slug })}
                                         actionLabel="View Sponsor"
                                     />
-                                </motion.div>
+                                </Div>
                             ))}
-                        </motion.div>
+                        </Div>
                     )}
 
                     {links.length > 1 && (
-                        <motion.nav className="flex flex-wrap items-center justify-center gap-2 pt-2 pb-4" variants={itemVariants} aria-label="Sponsor videos pagination">
+                        <Nav className="flex flex-wrap items-center justify-center gap-2 pt-2 pb-4" {...(!reduceMotion && { variants: itemVariants })} aria-label="Sponsor videos pagination">
                             {links.map((link, i) => {
                                 const isActive = link.active;
                                 const isDisabled = !link.url;
@@ -212,9 +217,9 @@ export default function BrandShow({ brand, videos, filters = {} }) {
                                     </Link>
                                 );
                             })}
-                        </motion.nav>
+                        </Nav>
                     )}
-                </motion.section>
+                </Section>
             </div>
 
             <HeroNav position="top" />

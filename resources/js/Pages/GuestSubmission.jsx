@@ -2,6 +2,7 @@ import HeroVideoBackground from '@/Components/HeroVideoBackground';
 import HeroNav from '@/Components/HeroNav';
 import RecentVideos from '@/Components/RecentVideos';
 import HomeLayout from '@/Layouts/HomeLayout';
+import { useReduceMotion } from '@/hooks/useReduceMotion';
 import { Head, Link } from '@inertiajs/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useState } from 'react';
@@ -36,7 +37,10 @@ function LorrieImage() {
 }
 
 export default function GuestSubmission() {
+    const reduceMotion = useReduceMotion();
     const [activeTab, setActiveTab] = useState('submission');
+    const Div = reduceMotion ? 'div' : motion.div;
+    const TabContent = reduceMotion ? 'div' : motion.div;
 
     return (
         <HomeLayout>
@@ -44,17 +48,13 @@ export default function GuestSubmission() {
             <section className="relative min-h-screen overflow-hidden flex flex-col items-center justify-start px-4 sm:px-6 lg:px-8 py-16 pb-28">
                 <HeroVideoBackground />
                 <div className="absolute inset-0 bg-black/50 z-0" />
-                <motion.div
+                <Div
                     className="relative z-10 w-full max-w-7xl flex flex-col"
-                    initial={{ opacity: 0, y: 16 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.25, ease: 'easeOut' }}
+                    {...(!reduceMotion && { initial: { opacity: 0, y: 16 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.25, ease: 'easeOut' } })}
                 >
-                    <motion.div
+                    <Div
                         className="relative bg-white/95 backdrop-blur rounded-2xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh] md:max-h-[80vh] min-h-[400px]"
-                        initial={{ opacity: 0, scale: 0.99 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.2, delay: 0.05, ease: 'easeOut' }}
+                        {...(!reduceMotion && { initial: { opacity: 0, scale: 0.99 }, animate: { opacity: 1, scale: 1 }, transition: { duration: 0.2, delay: 0.05, ease: 'easeOut' } })}
                     >
                         <Link
                             href={route('welcome')}
@@ -90,14 +90,10 @@ export default function GuestSubmission() {
                         <div className="flex-1 overflow-y-auto px-6 sm:px-8 pb-4 min-h-0">
                             <AnimatePresence mode="wait">
                                 {activeTab === 'submission' && (
-                                    <motion.div
+                                    <TabContent
                                         key="submission"
                                         className="space-y-6 text-gray-700 leading-relaxed"
-                                        variants={tabVariants}
-                                        initial="in"
-                                        animate="active"
-                                        exit="out"
-                                        transition={quick}
+                                        {...(!reduceMotion && { variants: tabVariants, initial: 'in', animate: 'active', exit: 'out', transition: quick })}
                                     >
                                         <div className="flex flex-col lg:flex-row items-start gap-10 lg:gap-12">
                                             <div className="flex-1 order-2 lg:order-1">
@@ -123,18 +119,14 @@ export default function GuestSubmission() {
                                             {/* Lorrie image on both tabs */}
                                             <LorrieImage />
                                         </div>
-                                    </motion.div>
+                                    </TabContent>
                                 )}
 
                                 {activeTab === 'lorrie' && (
-                                    <motion.div
+                                    <TabContent
                                         key="lorrie"
                                         className="space-y-6 text-gray-700 leading-relaxed"
-                                        variants={tabVariants}
-                                        initial="in"
-                                        animate="active"
-                                        exit="out"
-                                        transition={quick}
+                                        {...(!reduceMotion && { variants: tabVariants, initial: 'in', animate: 'active', exit: 'out', transition: quick })}
                                     >
                                         <div className="flex flex-col lg:flex-row items-start gap-10 lg:gap-12">
                                             <div className="flex-1 order-2 lg:order-1">
@@ -151,17 +143,15 @@ export default function GuestSubmission() {
                                             {/* Lorrie image on both tabs */}
                                             <LorrieImage />
                                         </div>
-                                    </motion.div>
+                                    </TabContent>
                                 )}
                             </AnimatePresence>
                         </div>
 
                         {/* Fixed contact bar at bottom of card */}
-                        <motion.div
+                        <Div
                             className="shrink-0 border-t border-gray-200 bg-gray-50/80 px-6 sm:px-8 py-4"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ duration: 0.25, delay: 0.15 }}
+                            {...(!reduceMotion && { initial: { opacity: 0 }, animate: { opacity: 1 }, transition: { duration: 0.25, delay: 0.15 } })}
                         >
                             <p className="text-sm font-semibold text-gray-900 mb-1">Submit a Guest</p>
                             <p className="text-sm text-gray-600 mb-1">
@@ -173,9 +163,9 @@ export default function GuestSubmission() {
                                     guests@brucewcole.com
                                 </a>
                             </p>
-                        </motion.div>
-                    </motion.div>
-                </motion.div>
+                        </Div>
+                    </Div>
+                </Div>
 
                 <HeroNav />
             </section>
