@@ -15,7 +15,9 @@ const heroTextVariants = {
     }),
 };
 
-export default function Welcome({ videos = [] }) {
+export default function Welcome({ videos = [], current_time_and_date = null }) {
+    console.log(current_time_and_date);
+
     const reduceMotion = useReduceMotion();
     const H2 = reduceMotion ? 'h2' : motion.h2;
     const H1 = reduceMotion ? 'h1' : motion.h1;

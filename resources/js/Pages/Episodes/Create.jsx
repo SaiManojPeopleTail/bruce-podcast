@@ -21,9 +21,8 @@ function slugify(title) {
         .replace(/^-+|-+$/g, '');
 }
 
-function todayISO() {
-    const d = new Date();
-    return d.toISOString().slice(0, 10);
+function nowDateTimeISO() {
+    return new Date().toISOString().slice(0, 16);
 }
 
 function wait(ms) {
@@ -48,7 +47,7 @@ export default function Create() {
         slug: '',
         short_description: '',
         long_description: '',
-        created_at: todayISO(),
+        created_at: nowDateTimeISO(),
     });
 
     const [videoFile, setVideoFile] = useState(null);
@@ -467,15 +466,16 @@ export default function Create() {
                         </div>
 
                         <div>
-                            <InputLabel htmlFor="created_at" value="Published date *" />
+                            <InputLabel htmlFor="created_at" value="Published date and time *" />
                             <input
                                 id="created_at"
-                                type="date"
+                                type="datetime-local"
                                 required
                                 value={data.created_at}
                                 onChange={(e) => setData('created_at', e.target.value)}
                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
                             />
+                            <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">Content is shown after this date and time.</p>
                             <InputError message={errors.created_at} className="mt-1" />
                         </div>
 

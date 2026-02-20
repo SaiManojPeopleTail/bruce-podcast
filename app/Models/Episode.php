@@ -33,7 +33,7 @@ class Episode extends Model
     protected static function booted(): void
     {
         static::addGlobalScope('published', function (Builder $builder) {
-            $builder->whereDate('created_at', '<=', now())
+            $builder->where('created_at', '<=', now())
                 ->where('status', true);
         });
     }

@@ -92,6 +92,7 @@ class WelcomeController extends Controller
 
         return Inertia::render('Welcome', [
             'videos' => $paginator->items(),
+            'current_time_and_date' => now()->format('Y-m-d H:i:s'),
             'nextPage' => $paginator->hasMorePages() ? $paginator->currentPage() + 1 : null,
             'hasMore' => $paginator->hasMorePages(),
         ]);

@@ -21,17 +21,15 @@ function slugify(title) {
         .replace(/^-+|-+$/g, '');
 }
 
-function formatDateForInput(dateStr) {
+function formatDateTimeForInput(dateStr) {
     if (!dateStr) return '';
-    const raw = String(dateStr).slice(0, 10);
-    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
     const d = new Date(dateStr);
     if (Number.isNaN(d.getTime())) return '';
-    return d.toISOString().slice(0, 10);
+    return d.toISOString().slice(0, 16); // YYYY-MM-DDTHH:mm for datetime-local
 }
 
-function todayISO() {
-    return new Date().toISOString().slice(0, 10);
+function nowDateTimeISO() {
+    return new Date().toISOString().slice(0, 16);
 }
 
 export default function Edit({ episode }) {
@@ -42,7 +40,7 @@ export default function Edit({ episode }) {
         long_description: episode?.long_description ?? '',
         bunny_video_id: episode?.bunny_video_id ?? '',
         bunny_library_id: episode?.bunny_library_id ?? '',
-        created_at: (episode?.created_at && formatDateForInput(episode.created_at)) || todayISO(),
+        created_at: (episode?.created_at && formatDateTimeForInput(episode.created_at)) || nowDateTimeISO(),
     });
     const [uploadState, setUploadState] = useState({ status: 'idle', progress: 0, error: '' });
     const [uploadSession, setUploadSession] = useState(null);
@@ -335,15 +333,16 @@ export default function Edit({ episode }) {
                         </div>
 
                         <div>
-                            <InputLabel htmlFor="created_at" value="Published date *" />
+                            <InputLabel htmlFor="created_at" value="Published date and time *" />
                             <input
                                 id="created_at"
-                                type="date"
+                                type="datetime-local"
                                 required
                                 value={data.created_at}
                                 onChange={(e) => setData('created_at', e.target.value)}
                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
                             />
+                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Content is shown after this date and time.</p>
                             <InputError message={errors.created_at} className="mt-1" />
                         </div>
 

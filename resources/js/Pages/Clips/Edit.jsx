@@ -21,17 +21,15 @@ function slugify(title) {
         .replace(/^-+|-+$/g, '');
 }
 
-function formatDateForInput(dateStr) {
+function formatDateTimeForInput(dateStr) {
     if (!dateStr) return '';
-    const raw = String(dateStr).slice(0, 10);
-    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
     const d = new Date(dateStr);
     if (Number.isNaN(d.getTime())) return '';
-    return d.toISOString().slice(0, 10);
+    return d.toISOString().slice(0, 16);
 }
 
-function todayISO() {
-    return new Date().toISOString().slice(0, 10);
+function nowDateTimeISO() {
+    return new Date().toISOString().slice(0, 16);
 }
 
 export default function Edit({ episode, video }) {
@@ -42,7 +40,7 @@ export default function Edit({ episode, video }) {
         long_description: video?.long_description ?? '',
         bunny_video_id: video?.bunny_video_id ?? '',
         bunny_library_id: video?.bunny_library_id ?? '',
-        created_at: (video?.created_at && formatDateForInput(video.created_at)) || todayISO(),
+        created_at: (video?.created_at && formatDateTimeForInput(video.created_at)) || nowDateTimeISO(),
     });
 
     const [uploadState, setUploadState] = useState({ status: 'idle', progress: 0, error: '' });
@@ -276,8 +274,9 @@ export default function Edit({ episode, video }) {
                         </div>
 
                         <div>
-                            <InputLabel htmlFor="created_at" value="Published date *" />
-                            <TextInput id="created_at" type="date" value={data.created_at} onChange={(e) => setData('created_at', e.target.value)} className="mt-1 block w-full" />
+                            <InputLabel htmlFor="created_at" value="Published date and time *" />
+                            <TextInput id="created_at" type="datetime-local" value={data.created_at} onChange={(e) => setData('created_at', e.target.value)} className="mt-1 block w-full" />
+                            <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">Content is shown after this date and time.</p>
                             <InputError message={errors.created_at} className="mt-2" />
                         </div>
 
