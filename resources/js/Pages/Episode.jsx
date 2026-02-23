@@ -93,7 +93,7 @@ export default function Episode({ episode, isPreview = false }) {
                     </button>
                 </div>
                 {embedUrl ? (
-                    <div className="w-full h-auto rounded-3xl my-6 overflow-hidden bg-transparent" style={{
+                    <div className="w-full h-auto rounded-lg my-6 overflow-hidden bg-transparent" style={{
                         boxShadow: '0 0 15px 1px rgba(255, 222, 90, 0.5)',
                     }}>
                         <iframe
