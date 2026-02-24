@@ -65,7 +65,7 @@ export default function Footer() {
                             <i className="bi bi-linkedin text-2xl"></i>
                         </a>
                         <a
-                            href="https://spotify.com"
+                            href="https://open.spotify.com/show/4ITBbyyW0fDDKZUzobW71J"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="p-2 text-gray-400 hover:text-[#ffde59] transition-colors rounded focus:outline-none focus:ring-2 focus:ring-[#ffde59]/50"
@@ -76,7 +76,7 @@ export default function Footer() {
                             <i className="bi bi-spotify text-2xl"></i>
                         </a>
                         <a
-                            href="https://podcasts.apple.com"
+                            href="https://podcasts.apple.com/us/podcast/in-conversation-with-bruce-w-cole/id1879593811"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="p-2 text-gray-400 hover:text-[#ffde59] transition-colors rounded focus:outline-none focus:ring-2 focus:ring-[#ffde59]/50"
@@ -87,7 +87,7 @@ export default function Footer() {
                             <SiApplepodcasts className="w-[24px] h-[24px]" />
                         </a>
                         <a
-                            href="https://music.amazon.com"
+                            href="https://music.amazon.com/podcasts/c5ddb82a-e88e-488d-ba67-f3a02198955c/in-conversation-with-bruce-w-cole"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="p-2 text-gray-400 hover:text-[#ffde59] transition-colors rounded focus:outline-none focus:ring-2 focus:ring-[#ffde59]/50"
