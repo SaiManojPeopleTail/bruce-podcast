@@ -22,7 +22,7 @@ export default function Footer() {
                     >
                         Home
                     </Link>
-                    <Link href={route('all-episodes-list')} className="text-sm font-medium text-gray-300 hover:text-[#ffde59] transition-colors">
+                    <Link href={route('episodes-list')} className="text-sm font-medium text-gray-300 hover:text-[#ffde59] transition-colors">
                         Episodes
                     </Link>
                     <Link
@@ -115,11 +115,11 @@ export default function Footer() {
                         Bruce W. Cole
                     </p>
                     <p className="mt-2 text-sm font-medium text-gray-300 hover:text-[#ffde59] transition-colors hidden lg:block">
-                        © Miramedia Retail Production. All rights reserved.
+                        © Miramedia Retail Inc. All rights reserved.
                     </p>
                 </div>
                 <p className="order-4 mt-2 text-sm font-medium text-gray-300 hover:text-[#ffde59] transition-colors block lg:hidden">
-                    © Miramedia Retail Production. All rights reserved.
+                    © Miramedia Retail Inc. All rights reserved.
                 </p>
                 <Tooltip id="footer-social" place="top" />
             </div>

@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 
 const navItems = [
     { name: 'Home', path: '/' },
-    { name: 'Episodes', path: '/all-episodes', other_active_paths: ['/episodes', '/episodes/clips', '/sponsor-videos'] },
+    { name: 'Episodes', path: '/episodes', other_active_paths: ['all-episodes', '/episodes/clips', '/sponsor-videos'] },
     { name: 'Meet Bruce', path: '/meet-bruce' },
     { name: 'Guest Submissions', path: '/guest-submissions' },
     { name: 'Brand Partnerships', path: '/brand-partnerships' },
