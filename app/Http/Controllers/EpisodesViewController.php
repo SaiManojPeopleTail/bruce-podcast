@@ -385,6 +385,53 @@ class EpisodesViewController extends Controller
         return $this->renderSponsorVideoPage($video, true);
     }
 
+    /**
+     * Add og:type video, og:video, og:video:secure_url and VideoObject JSON-LD for watch pages.
+     *
+     * @param  Episode|Clip|SponsorVideo  $video
+     */
+    protected function applyVideoPageMeta(Episode|Clip|SponsorVideo $video, string $canonical): void
+    {
+        $libraryId = $video->bunny_library_id ?? null;
+        $videoId = $video->bunny_video_id ?? null;
+
+        $embedUrl = null;
+        if ($libraryId && $videoId) {
+            $embedUrl = 'https://iframe.mediadelivery.net/embed/' . $libraryId . '/' . $videoId;
+        }
+
+        Meta::addMeta('og:type', 'video.other');
+        if ($embedUrl !== null) {
+            Meta::addMeta('og:video', $embedUrl);
+            Meta::addMeta('og:video:secure_url', $embedUrl);
+        }
+
+        $videoObject = [
+            '@context' => 'https://schema.org',
+            '@type' => 'VideoObject',
+            'name' => $video->title,
+            'description' => trim((string) ($video->short_description ?: $video->long_description ?: '')),
+            'url' => $canonical,
+        ];
+
+        if ($video->thumbnail_url) {
+            $videoObject['thumbnailUrl'] = $video->thumbnail_url;
+        }
+        if ($video->created_at) {
+            $videoObject['uploadDate'] = $video->created_at->toIso8601String();
+        }
+        if ($embedUrl !== null) {
+            $videoObject['embedUrl'] = $embedUrl;
+        }
+
+        $author = trim((string) config('app.author', ''));
+        if ($author !== '') {
+            $videoObject['publisher'] = ['@type' => 'Organization', 'name' => $author];
+        }
+
+        Meta::addMeta('json-ld-video', json_encode($videoObject, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+    }
+
     protected function renderEpisodePage(Episode $episode, bool $isPreview)
     {
         $canonical = url()->current();
@@ -394,7 +441,6 @@ class EpisodesViewController extends Controller
         Meta::addMeta('og:description', $episode->short_description ?: $episode->long_description);
         Meta::addMeta('og:url', $canonical);
         Meta::setCanonical($canonical);
-        Meta::addMeta('og:type', 'website');
         if ($episode->thumbnail_url) {
             Meta::addMeta('og:image', $episode->thumbnail_url);
         } else {
@@ -405,6 +451,8 @@ class EpisodesViewController extends Controller
                 Meta::addMeta('og:image', static::defaultOgImage());
             }
         }
+
+        $this->applyVideoPageMeta($episode, $canonical);
 
         if ($isPreview) {
             Meta::addMeta('robots', 'noindex, nofollow');
@@ -425,12 +473,13 @@ class EpisodesViewController extends Controller
         Meta::addMeta('og:description', $video->short_description ?: $video->long_description);
         Meta::addMeta('og:url', $canonical);
         Meta::setCanonical($canonical);
-        Meta::addMeta('og:type', 'website');
         if ($video->thumbnail_url) {
             Meta::addMeta('og:image', $video->thumbnail_url);
         } else {
             Meta::addMeta('og:image', static::defaultOgImage());
         }
+
+        $this->applyVideoPageMeta($video, $canonical);
 
         if ($isPreview) {
             Meta::addMeta('robots', 'noindex, nofollow');
@@ -451,12 +500,13 @@ class EpisodesViewController extends Controller
         Meta::addMeta('og:description', $video->short_description ?: $video->long_description);
         Meta::addMeta('og:url', $canonical);
         Meta::setCanonical($canonical);
-        Meta::addMeta('og:type', 'website');
         if ($video->thumbnail_url) {
             Meta::addMeta('og:image', $video->thumbnail_url);
         } else {
             Meta::addMeta('og:image', static::defaultOgImage());
         }
+
+        $this->applyVideoPageMeta($video, $canonical);
 
         if ($isPreview) {
             Meta::addMeta('robots', 'noindex, nofollow');

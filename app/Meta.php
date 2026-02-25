@@ -112,7 +112,7 @@ class Meta
                 $html[] = '<title>' . e($content) . '</title>';
                 continue;
             }
-            if ($name === 'json-ld') {
+            if (str_starts_with($name, 'json-ld')) {
                 $html[] = '<script type="application/ld+json">' . "\n" . $content . "\n" . '</script>';
                 continue;
             }
