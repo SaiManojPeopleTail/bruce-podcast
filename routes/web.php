@@ -5,14 +5,17 @@ use App\Http\Controllers\BrandsViewController;
 use App\Http\Controllers\ClipController;
 use App\Http\Controllers\EpisodeController;
 use App\Http\Controllers\EpisodesViewController;
+use App\Http\Controllers\NewsletterController;
 use App\Http\Controllers\PersonalityController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\RetailerDepartmentController;
+use App\Http\Controllers\RetailerProfilesController;
+use App\Http\Controllers\RetailersViewController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\SiteSettingsController;
 use App\Http\Controllers\SponsorVideoController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WelcomeController;
-use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
@@ -37,6 +40,15 @@ Route::get('/sponsor-videos', [EpisodesViewController::class, 'sponsorVideosInde
 Route::get('/sponsor-video/{slug}', [EpisodesViewController::class, 'sponsorVideoShow'])->name('sponsor-video-show');
 Route::get('/our-brands', [BrandsViewController::class, 'index'])->name('our-brands-list');
 Route::get('/our-brands/{brand}', [BrandsViewController::class, 'show'])->name('our-brands-show');
+
+Route::get('/retailer-profiles', [RetailersViewController::class, 'index'])->name('retailer-profiles-list');
+Route::get('/retailer-profiles/{handle}', [RetailersViewController::class, 'show'])
+    ->name('retailer-profiles-show')
+    ->where('handle', '[a-z0-9]+(?:-[a-z0-9]+)*');
+
+Route::post('/newsletter/subscribe', [NewsletterController::class, 'subscribe'])
+    ->middleware('throttle:10,1')
+    ->name('newsletter.subscribe');
 
 Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', function () {
@@ -103,6 +115,23 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () {
     Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
     Route::patch('/users/{user}/password', [UserController::class, 'updatePassword'])->name('users.update-password');
 
+    Route::prefix('retailer-profiles')->name('retailer-profiles.')->group(function () {
+        Route::get('/retailers', [RetailerProfilesController::class, 'retailers'])->name('retailers.index');
+        Route::post('/retailers/bulk-import', [RetailerProfilesController::class, 'bulkImport'])->name('retailers.bulk-import');
+        Route::get('/retailers/create', [RetailerProfilesController::class, 'create'])->name('retailers.create');
+        Route::post('/retailers', [RetailerProfilesController::class, 'store'])->name('retailers.store');
+        Route::get('/retailers/{retailer}/edit', [RetailerProfilesController::class, 'edit'])->name('retailers.edit');
+        Route::patch('/retailers/{retailer}', [RetailerProfilesController::class, 'update'])->name('retailers.update');
+        Route::patch('/retailers/{retailer}/toggle-active', [RetailerProfilesController::class, 'toggleActive'])->name('retailers.toggle-active');
+        Route::delete('/retailers/{retailer}', [RetailerProfilesController::class, 'destroy'])->name('retailers.destroy');
+        Route::get('/departments', [RetailerDepartmentController::class, 'index'])->name('departments.index');
+        Route::get('/departments/create', [RetailerDepartmentController::class, 'create'])->name('departments.create');
+        Route::post('/departments', [RetailerDepartmentController::class, 'store'])->name('departments.store');
+        Route::get('/departments/{retailerDepartment}/edit', [RetailerDepartmentController::class, 'edit'])->name('departments.edit');
+        Route::patch('/departments/{retailerDepartment}', [RetailerDepartmentController::class, 'update'])->name('departments.update');
+        Route::delete('/departments/{retailerDepartment}', [RetailerDepartmentController::class, 'destroy'])->name('departments.destroy');
+    });
+
     Route::get('/site-settings', [SiteSettingsController::class, 'index'])->name('site-settings.index');
     Route::get('/site-settings/pages/{page}/edit', [SiteSettingsController::class, 'edit'])->name('site-settings.pages.edit');
     Route::patch('/site-settings/pages/{page}', [SiteSettingsController::class, 'update'])->name('site-settings.pages.update');
@@ -113,13 +142,14 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/api/youtube-oembed', function (Request $request) {
         $url = $request->query('url');
-        if (!$url || !preg_match('#^(https?://)?(www\.)?(youtube\.com/watch\?v=|youtu\.be/)#i', $url)) {
+        if (! $url || ! preg_match('#^(https?://)?(www\.)?(youtube\.com/watch\?v=|youtu\.be/)#i', $url)) {
             return response()->json(['error' => 'Invalid YouTube URL'], 400);
         }
         $response = Http::get('https://www.youtube.com/oembed', ['url' => $url, 'format' => 'json']);
-        if (!$response->successful()) {
+        if (! $response->successful()) {
             return response()->json(['error' => 'Video not found'], 404);
         }
+
         return response()->json($response->json());
     })->name('api.youtube-oembed');
 });

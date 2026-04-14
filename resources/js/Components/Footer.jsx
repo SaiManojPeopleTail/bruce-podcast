@@ -1,3 +1,4 @@
+import NewsletterFooterSignup from '@/Components/NewsletterFooterSignup';
 import { SiApplepodcasts } from '@icons-pack/react-simple-icons';
 import { Link } from '@inertiajs/react';
 import { Tooltip } from 'react-tooltip';
@@ -51,7 +52,10 @@ export default function Footer() {
                         lg:order-3
                     "
                 >
-                    <p className='text-sm font-medium text-gray-300 ml-2'>Follow and listen to us on:</p>
+                    <div className="ml-2 w-full mb-4">
+                        <NewsletterFooterSignup location="footer" />
+                    </div>
+                    <p className='text-sm font-medium text-gray-300 ml-2 mt-1'>Follow and listen to us on:</p>
                     <div className='flex items-start gap-4 self-start lg:self-auto'>
                         <a
                             href="https://www.linkedin.com/company/in-conversation-with-bruce-w-cole/"

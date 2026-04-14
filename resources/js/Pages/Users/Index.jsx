@@ -9,7 +9,7 @@ import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
 export default function Index({ users }) {
-    const { flash, auth } = usePage().props;
+    const { auth } = usePage().props;
     const currentUserId = auth?.user?.id;
     const [deleteUser, setDeleteUser] = useState(null);
     const [passwordUser, setPasswordUser] = useState(null);
@@ -49,12 +49,6 @@ export default function Index({ users }) {
             <Head title="User management" />
 
             <div className="w-full py-6">
-                {flash?.success && (
-                    <div className="mb-4 rounded-md bg-green-100 px-4 py-3 text-sm text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                        {flash.success}
-                    </div>
-                )}
-
                 <div className="mb-6 flex items-center justify-between">
                     <p className="text-sm text-gray-600 dark:text-slate-400">
                         Add and delete users, or change their passwords.

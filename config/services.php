@@ -41,4 +41,9 @@ return [
         'pull_zone' => env('BUNNY_PULL_ZONE'),
     ],
 
+    'mailchimp' => [
+        'api_key' => env('MAILCHIP_API_KEY', env('MAILCHIMP_API_KEY')),
+        'audience_id' => env('MAILCHIP_AUDIENCE_ID', env('MAILCHIMP_AUDIENCE_ID')),
+    ],
+
 ];

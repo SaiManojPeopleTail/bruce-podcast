@@ -10,6 +10,7 @@ import axios from 'axios';
 import * as tus from 'tus-js-client';
 import { Loader2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import toast from 'react-hot-toast';
 
 const UPLOAD_STALL_TIMEOUT_MS = 90_000;
 const stepOrder = ['create', 'upload', 'process', 'thumbnail', 'update'];
@@ -254,6 +255,7 @@ export default function Create({ brand }) {
 
             setStatusMessage('Sponsor video created successfully. Redirecting...');
             setWorkflowDone(true);
+            toast.success('Sponsor video created successfully.');
             await wait(900);
             window.location.href = route('brands.videos.index', brand.id);
         } catch (err) {
@@ -265,6 +267,7 @@ export default function Create({ brand }) {
 
             const message = err?.response?.data?.error || err?.message || 'Workflow failed.';
             setWorkflowError(message);
+            toast.error(message);
             setStatusMessage('Workflow stopped with an error.');
             setStepStatus(currentStep, 'failed');
             setFailedStep(currentStep);
@@ -445,12 +448,6 @@ export default function Create({ brand }) {
                     {workflowError && (
                         <div className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
                             {workflowError}
-                        </div>
-                    )}
-
-                    {workflowDone && (
-                        <div className="mt-4 rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400">
-                            Sponsor video created successfully.
                         </div>
                     )}
 

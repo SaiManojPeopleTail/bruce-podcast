@@ -2,11 +2,10 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import DangerButton from '@/Components/DangerButton';
 import Modal from '@/Components/Modal';
 import PrimaryButton from '@/Components/PrimaryButton';
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 
 export default function Index({ brands, filters }) {
-    const { flash } = usePage().props;
     const [deleteId, setDeleteId] = useState(null);
     const [search, setSearch] = useState(filters?.search ?? '');
 
@@ -32,17 +31,6 @@ export default function Index({ brands, filters }) {
             <Head title="Brands" />
 
             <div className="w-full py-6">
-                {flash?.success && (
-                    <div className="mb-4 rounded-md bg-green-100 px-4 py-3 text-sm text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                        {flash.success}
-                    </div>
-                )}
-                {flash?.error && (
-                    <div className="mb-4 rounded-md bg-red-100 px-4 py-3 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-400">
-                        {flash.error}
-                    </div>
-                )}
-
                 <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <form onSubmit={handleSearch} className="flex flex-1 gap-2 sm:max-w-md">
                         <input

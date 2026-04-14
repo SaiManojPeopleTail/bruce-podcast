@@ -21,7 +21,8 @@ class Page extends Model
             'home' => '/',
             'all-episodes' => '/all-episodes',
             'clips' => '/episodes/clips',
-            default => '/' . $slug,
+            'retailer-profiles' => '/retailer-profiles',
+            default => '/'.$slug,
         };
     }
 
@@ -37,6 +38,8 @@ class Page extends Model
             'episodes' => 'Episodes',
             'clips' => 'Clips',
             'sponsor-videos' => 'Sponsor Videos',
+            'retailer-profiles' => 'Retailer Profiles',
+            'our-brands' => 'Our Brands',
             default => $slug,
         };
     }

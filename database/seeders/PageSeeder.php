@@ -72,6 +72,13 @@ class PageSeeder extends Seeder
                 'meta_keywords' => null,
                 'og_image' => null,
             ],
+            [
+                'slug' => 'retailer-profiles',
+                'meta_title' => 'Retailer Profiles',
+                'meta_description' => 'Browse retailer profiles featured on In Conversation with Bruce W. Cole.',
+                'meta_keywords' => 'natural health retailers, bruce w. cole, podcast retailers',
+                'og_image' => null,
+            ],
             // Our Brands – not needed for now
             // [
             //     'slug' => 'our-brands',

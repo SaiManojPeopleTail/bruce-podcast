@@ -1,4 +1,5 @@
 import Footer from '@/Components/Footer';
+import Newsletter from '@/Components/Newsletter';
 
 export default function HomeLayout({ children }) {
     return (
@@ -6,6 +7,7 @@ export default function HomeLayout({ children }) {
             <div className="flex-1 flex flex-col gap-10">
                 {children}
             </div>
+            <Newsletter />
             <Footer />
         </div>
     );

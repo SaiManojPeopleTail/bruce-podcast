@@ -2,11 +2,23 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import DangerButton from '@/Components/DangerButton';
 import Modal from '@/Components/Modal';
 import PrimaryButton from '@/Components/PrimaryButton';
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 
+function stripPaginationLabel(label) {
+    if (label == null) {
+        return '';
+    }
+    return String(label)
+        .replace(/<[^>]+>/g, '')
+        .replace(/&laquo;/g, '«')
+        .replace(/&raquo;/g, '»')
+        .replace('&laquo; Previous', 'Previous')
+        .replace('Next &raquo;', 'Next')
+        .trim();
+}
+
 export default function Index({ episodes, filters }) {
-    const { flash } = usePage().props;
     const [deleteId, setDeleteId] = useState(null);
     const [search, setSearch] = useState(filters?.search ?? '');
     const [openMenuId, setOpenMenuId] = useState(null);
@@ -40,7 +52,6 @@ export default function Index({ episodes, filters }) {
     };
 
     const episodeList = episodes.data || [];
-    const pagination = episodes;
 
     return (
         <AuthenticatedLayout
@@ -53,17 +64,6 @@ export default function Index({ episodes, filters }) {
             <Head title="Episodes" />
 
             <div className="w-full py-6">
-                {flash?.success && (
-                    <div className="mb-4 rounded-md bg-green-100 px-4 py-3 text-sm text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                        {flash.success}
-                    </div>
-                )}
-                {flash?.error && (
-                    <div className="mb-4 rounded-md bg-red-100 px-4 py-3 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-400">
-                        {flash.error}
-                    </div>
-                )}
-
                 <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <form onSubmit={handleSearch} className="flex flex-1 gap-2 sm:max-w-md">
                         <input
@@ -206,42 +206,50 @@ export default function Index({ episodes, filters }) {
                                     </li>
                                 ))}
                             </ul>
-
-                            {pagination.last_page > 1 && (
-                                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-gray-200 px-4 py-3 dark:border-slate-700 sm:px-6">
-                                    <p className="text-sm text-gray-700 dark:text-slate-300">
-                                        Showing{' '}
-                                        <span className="font-medium">{pagination.from}</span> to{' '}
-                                        <span className="font-medium">{pagination.to}</span> of{' '}
-                                        <span className="font-medium">{pagination.total}</span> episodes
-                                    </p>
-                                    <div className="flex gap-1">
-                                        {pagination.links.map((link) => (
-                                            <span key={link.label}>
-                                                {link.url ? (
-                                                    <Link
-                                                        href={link.url}
-                                                        className={`inline-flex items-center rounded-md border px-3 py-1 text-sm ${
-                                                            link.active
-                                                                ? 'border-indigo-500 bg-indigo-50 font-medium text-indigo-600 dark:border-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400'
-                                                                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
-                                                        }`}
-                                                    >
-                                                        {link.label.replace('&laquo; Previous', 'Previous').replace('Next &raquo;', 'Next')}
-                                                    </Link>
-                                                ) : (
-                                                    <span className="inline-flex cursor-default items-center rounded-md border border-gray-200 bg-gray-100 px-3 py-1 text-sm text-gray-400 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-500">
-                                                        {link.label.replace('&laquo; ', '').replace(' &raquo;', '')}
-                                                    </span>
-                                                )}
-                                            </span>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
                         </>
                     )}
                 </div>
+
+                {episodeList.length > 0 && episodes?.total != null && (
+                    <div className="mt-6 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-800">
+                        <p className="text-sm text-gray-700 dark:text-slate-300">
+                            Showing{' '}
+                            <span className="font-medium">{episodes.from}</span> to{' '}
+                            <span className="font-medium">{episodes.to}</span> of{' '}
+                            <span className="font-medium">{episodes.total}</span> episodes
+                            {episodes.last_page > 1 ? (
+                                <span className="text-gray-500 dark:text-slate-400">
+                                    {' '}
+                                    (page {episodes.current_page} of {episodes.last_page})
+                                </span>
+                            ) : null}
+                        </p>
+                        {episodes.last_page > 1 ? (
+                            <div className="flex flex-wrap gap-1">
+                                {episodes.links.map((link, idx) => (
+                                    <span key={idx}>
+                                        {link.url ? (
+                                            <Link
+                                                href={link.url}
+                                                className={`inline-flex items-center rounded-md border px-3 py-1 text-sm ${
+                                                    link.active
+                                                        ? 'border-indigo-500 bg-indigo-50 font-medium text-indigo-600 dark:border-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400'
+                                                        : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
+                                                }`}
+                                            >
+                                                {stripPaginationLabel(link.label)}
+                                            </Link>
+                                        ) : (
+                                            <span className="inline-flex cursor-default items-center rounded-md border border-gray-200 bg-gray-100 px-3 py-1 text-sm text-gray-400 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-500">
+                                                {stripPaginationLabel(link.label)}
+                                            </span>
+                                        )}
+                                    </span>
+                                ))}
+                            </div>
+                        ) : null}
+                    </div>
+                )}
             </div>
 
             <Modal show={!!deleteId} onClose={() => setDeleteId(null)} maxWidth="sm">

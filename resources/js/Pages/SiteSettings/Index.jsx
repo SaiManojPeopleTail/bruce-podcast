@@ -1,9 +1,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 
 export default function Index({ pages }) {
-    const { flash } = usePage().props;
-
     return (
         <AuthenticatedLayout
             header={
@@ -15,12 +13,6 @@ export default function Index({ pages }) {
             <Head title="Site settings" />
 
             <div className="w-full py-6">
-                {flash?.success && (
-                    <div className="mb-4 rounded-md bg-green-100 px-4 py-3 text-sm text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                        {flash.success}
-                    </div>
-                )}
-
                 <p className="mb-6 text-sm text-gray-600 dark:text-slate-400">
                     Edit meta (title, description, keywords, OG image) for each page. Home (/) is the default when a page has no meta. Episode pages use the episode title and description automatically.
                 </p>

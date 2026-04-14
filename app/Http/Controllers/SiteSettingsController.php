@@ -8,7 +8,7 @@ use Inertia\Inertia;
 
 class SiteSettingsController extends Controller
 {
-    protected const PAGE_SLUGS = ['home', 'about', 'brand-partnerships', 'guest-submissions', 'all-episodes', 'episodes', 'clips', 'sponsor-videos'];
+    protected const PAGE_SLUGS = ['home', 'about', 'brand-partnerships', 'guest-submissions', 'all-episodes', 'episodes', 'clips', 'sponsor-videos', 'retailer-profiles'];
 
     protected function ensureAdmin(): void
     {
@@ -40,7 +40,7 @@ class SiteSettingsController extends Controller
     public function edit(Page $page)
     {
         $this->ensureAdmin();
-        if (!in_array($page->slug, self::PAGE_SLUGS, true)) {
+        if (! in_array($page->slug, self::PAGE_SLUGS, true)) {
             abort(404);
         }
 
@@ -61,7 +61,7 @@ class SiteSettingsController extends Controller
     public function update(Request $request, Page $page)
     {
         $this->ensureAdmin();
-        if (!in_array($page->slug, self::PAGE_SLUGS, true)) {
+        if (! in_array($page->slug, self::PAGE_SLUGS, true)) {
             abort(404);
         }
 

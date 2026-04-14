@@ -9,6 +9,7 @@ const navItems = [
     { name: 'Meet Bruce', path: '/meet-bruce' },
     { name: 'Guest Submissions', path: '/guest-submissions' },
     { name: 'Brand Partnerships', path: '/brand-partnerships' },
+    { name: 'Retailer Profiles', path: '/retailer-profiles', other_active_paths: ['/retailer-profiles'] },
 ];
 
 // Unstick when user scrolls back up near the top

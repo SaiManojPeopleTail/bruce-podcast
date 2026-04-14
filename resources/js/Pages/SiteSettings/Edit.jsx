@@ -3,10 +3,9 @@ import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
-import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { Head, Link, useForm } from '@inertiajs/react';
 
 export default function Edit({ page }) {
-    const { flash } = usePage().props;
     const { data, setData, patch, processing, errors } = useForm({
         meta_title: page?.meta_title ?? '',
         meta_description: page?.meta_description ?? '',
@@ -30,11 +29,6 @@ export default function Edit({ page }) {
             <Head title={`Edit ${page?.name} — Site settings`} />
 
             <div className="w-full py-6">
-                {flash?.success && (
-                    <div className="mb-4 rounded-md bg-green-50 p-4 text-sm text-green-800 dark:bg-green-900/20 dark:text-green-400">
-                        {flash.success}
-                    </div>
-                )}
                 <div className="mb-6">
                     <Link
                         href={route('site-settings.index')}
