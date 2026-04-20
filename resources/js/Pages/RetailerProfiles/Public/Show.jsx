@@ -56,7 +56,7 @@ export default function PublicRetailerShow({ retailer }) {
                         />
                     ) : (
                         <p className="mt-8 text-base leading-relaxed text-gray-700">
-                            No description has been added for this retailer yet.
+                            {/* No description has been added for this retailer yet. */}
                         </p>
                     )}
 

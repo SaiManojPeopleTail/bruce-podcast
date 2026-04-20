@@ -9,7 +9,7 @@ const navItems = [
     { name: 'Meet Bruce', path: '/meet-bruce' },
     { name: 'Guest Submissions', path: '/guest-submissions' },
     { name: 'Brand Partnerships', path: '/brand-partnerships' },
-    { name: 'Retailer Profiles', path: '/retailer-profiles', other_active_paths: ['/retailer-profiles'] },
+    // { name: 'Retailer Profiles', path: '/retailer-profiles', other_active_paths: ['/retailer-profiles'] },
 ];
 
 // Unstick when user scrolls back up near the top
@@ -142,7 +142,7 @@ export default function HeroNav({ position = 'bottom' }) {
                                             method="get"
                                             onClick={() => setMenuOpen(false)}
                                             className={`
-                                                py-3 border-b border-white/10
+                                                py-3 border-b border-white/10 cursor-pointer
                                                 ${linkClass}
                                                 ${current ? 'text-[#ffde59] font-bold' : ''}
                                             `}
