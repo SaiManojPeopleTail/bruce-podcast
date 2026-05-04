@@ -2,6 +2,7 @@ import { AdminFlashToasts, AdminToaster } from '@/Components/AdminToastHost';
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import Dropdown from '@/Components/Dropdown';
 import { Link, usePage } from '@inertiajs/react';
+import { Inbox, QrCode } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 const STORAGE_KEY = 'theme';
@@ -181,6 +182,15 @@ export default function AuthenticatedLayout({ header, children }) {
                                 </div>
                             )}
                         </div>
+
+                        <NavItem href={route('product-qr-lists.index')} active={route().current('product-qr-lists.*')}>
+                            <QrCode className="h-5 w-5 shrink-0" />
+                            Product QR lists
+                        </NavItem>
+                        <NavItem href={route('product-enquiries.index')} active={route().current('product-enquiries.*')}>
+                            <Inbox className="h-5 w-5 shrink-0" />
+                            Product Enquiries
+                        </NavItem>
 
                         {user.id < 3 && (
                             <NavItem href={route('site-settings.index')} active={route().current('site-settings.*')}>

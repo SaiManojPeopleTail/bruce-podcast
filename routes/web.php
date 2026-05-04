@@ -7,6 +7,9 @@ use App\Http\Controllers\EpisodeController;
 use App\Http\Controllers\EpisodesViewController;
 use App\Http\Controllers\NewsletterController;
 use App\Http\Controllers\PersonalityController;
+use App\Http\Controllers\ProductEnquiryController;
+use App\Http\Controllers\ProductEnquirySubmissionController;
+use App\Http\Controllers\ProductQrListController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RetailerDepartmentController;
 use App\Http\Controllers\RetailerProfilesController;
@@ -49,6 +52,14 @@ Route::get('/retailer-profiles/{handle}', [RetailersViewController::class, 'show
 Route::post('/newsletter/subscribe', [NewsletterController::class, 'subscribe'])
     ->middleware('throttle:10,1')
     ->name('newsletter.subscribe');
+
+Route::get('/product/{slug}', [ProductEnquiryController::class, 'show'])
+    ->name('product-enquiry.index')
+    ->where('slug', '[a-z0-9]+(?:-[a-z0-9]+)*');
+Route::post('/product/{slug}', [ProductEnquiryController::class, 'store'])
+    ->middleware('throttle:10,1')
+    ->name('product-enquiry.record-submission')
+    ->where('slug', '[a-z0-9]+(?:-[a-z0-9]+)*');
 
 Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', function () {
@@ -152,6 +163,21 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () {
 
         return response()->json($response->json());
     })->name('api.youtube-oembed');
+
+    Route::get('/product-enquiries', [ProductEnquirySubmissionController::class, 'index'])->name('product-enquiries.index');
+    Route::get('/product-enquiries/ids', [ProductEnquirySubmissionController::class, 'ids'])->name('product-enquiries.ids');
+    Route::post('/product-enquiries/bulk-destroy', [ProductEnquirySubmissionController::class, 'bulkDestroy'])->name('product-enquiries.bulk-destroy');
+    Route::match(['get', 'post'], '/product-enquiries/export', [ProductEnquirySubmissionController::class, 'export'])->name('product-enquiries.export');
+    Route::get('/product-enquiries/export-range-count', [ProductEnquirySubmissionController::class, 'exportRangeCount'])->name('product-enquiries.export-range-count');
+    Route::delete('/product-enquiries/{productEnquiry}', [ProductEnquirySubmissionController::class, 'destroy'])->name('product-enquiries.destroy');
+
+    Route::get('/product-qr-lists', [ProductQrListController::class, 'index'])->name('product-qr-lists.index');
+    Route::get('/product-qr-lists/create', [ProductQrListController::class, 'create'])->name('product-qr-lists.create');
+    Route::get('/product-qr-lists/check-slug', [ProductQrListController::class, 'checkSlug'])->name('product-qr-lists.check-slug');
+    Route::post('/product-qr-lists', [ProductQrListController::class, 'store'])->name('product-qr-lists.store');
+    Route::get('/product-qr-lists/{productQrList}/edit', [ProductQrListController::class, 'edit'])->name('product-qr-lists.edit');
+    Route::patch('/product-qr-lists/{productQrList}', [ProductQrListController::class, 'update'])->name('product-qr-lists.update');
+    Route::delete('/product-qr-lists/{productQrList}', [ProductQrListController::class, 'destroy'])->name('product-qr-lists.destroy');
 });
 
 require __DIR__.'/auth.php';

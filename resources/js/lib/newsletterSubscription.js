@@ -5,7 +5,7 @@ export const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export const DELAY_MS = 1500;
 
 /** After the modal is closed: wait this long before it may appear again. */
-export const CLOSED_COOLDOWN_MS = 5 * 60 * 1000; // should be 5 minutes
+export const CLOSED_COOLDOWN_MS = 10 * 60 * 1000; // should be 10 minutes
 
 export const LS_SUBSCRIBED = 'pod_newsletter_subscribed';
 /** Set only when the user closes the modal (X, Not now, backdrop). Value is `Date.now()` when closed. */
