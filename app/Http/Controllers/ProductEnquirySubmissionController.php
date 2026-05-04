@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\SendProductEnquiryNotificationJob;
 use App\Models\ProductEnquiry;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -68,7 +69,7 @@ class ProductEnquirySubmissionController extends Controller
     {
         $query = $this->applyEnquirySearch(
             ProductEnquiry::query()
-                ->with(['productQrList:id,product_name'])
+                ->with(['productQrList:id,product_name,notification_email'])
                 ->orderByDesc('created_at'),
             $request,
         );
@@ -83,6 +84,9 @@ class ProductEnquirySubmissionController extends Controller
                 'message' => $e->message,
                 'created_at' => $e->created_at?->toIso8601String(),
                 'product_name' => $e->productQrList?->product_name ?? '—',
+                'product_notification_email' => $e->productQrList?->notification_email,
+                'notification_status' => $e->notification_status ?? 'na',
+                'notification_error' => $e->notification_error,
             ];
         });
 
@@ -106,6 +110,29 @@ class ProductEnquirySubmissionController extends Controller
         $ids = $query->limit(25_000)->pluck('id')->values()->all();
 
         return response()->json(['ids' => $ids]);
+    }
+
+    public function resendNotification(ProductEnquiry $productEnquiry)
+    {
+        $productEnquiry->loadMissing('productQrList');
+        $to = trim((string) ($productEnquiry->productQrList?->notification_email ?? ''));
+        if ($to === '') {
+            return redirect()->back()
+                ->with('error', 'This product has no notification email. Add one on the product QR edit page.');
+        }
+        if ($productEnquiry->notification_status === 'sent') {
+            return redirect()->back()
+                ->with('error', 'Notification was already sent.');
+        }
+
+        $productEnquiry->update([
+            'notification_status' => 'pending',
+            'notification_error' => null,
+        ]);
+        SendProductEnquiryNotificationJob::dispatchAfterResponse($productEnquiry->id);
+
+        return redirect()->back()
+            ->with('success', 'Notification queued to send.');
     }
 
     public function bulkDestroy(Request $request)
@@ -195,7 +222,7 @@ class ProductEnquirySubmissionController extends Controller
         return response()->streamDownload(function () use ($query) {
             $handle = fopen('php://output', 'w');
             fwrite($handle, "\xEF\xBB\xBF");
-            fputcsv($handle, ['Submitted at', 'Product', 'Name', 'Store name', 'Email', 'Phone', 'Message']);
+            fputcsv($handle, ['Submitted at', 'Product', 'Name', 'Store name', 'Email', 'Phone', 'Message', 'Notify status']);
 
             foreach ($query->cursor() as $e) {
                 fputcsv($handle, [
@@ -206,6 +233,7 @@ class ProductEnquirySubmissionController extends Controller
                     $e->email,
                     $e->phone,
                     $e->message,
+                    $e->notification_status ?? 'na',
                 ]);
             }
 

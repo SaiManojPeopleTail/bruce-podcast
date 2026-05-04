@@ -14,6 +14,8 @@ class ProductEnquiry extends Model
         'phone',
         'email',
         'message',
+        'notification_status',
+        'notification_error',
     ];
 
     public function productQrList(): BelongsTo

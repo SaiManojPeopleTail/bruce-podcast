@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\SendProductEnquiryNotificationJob;
 use App\Models\ProductEnquiry;
 use App\Models\ProductQrList;
 use Illuminate\Http\Request;
@@ -92,14 +93,23 @@ class ProductEnquiryController extends Controller
             'message' => ['nullable', 'string', 'max:10000'],
         ]);
 
-        ProductEnquiry::query()->create([
+        $notifyTo = trim((string) ($product->notification_email ?? ''));
+        $notificationStatus = $notifyTo !== '' ? 'pending' : 'na';
+
+        $enquiry = ProductEnquiry::query()->create([
             'product_qr_list_id' => $product->id,
             'name' => $validated['name'],
             'store_name' => $validated['store_name'],
             'phone' => $validated['phone'],
             'email' => $validated['email'],
             'message' => $validated['message'] ?? '',
+            'notification_status' => $notificationStatus,
         ]);
+
+        if ($notificationStatus === 'pending') {
+            // Runs after the redirect response (no queue worker required). Uses the sync driver internally.
+            SendProductEnquiryNotificationJob::dispatchAfterResponse($enquiry->id);
+        }
 
         return redirect()->route('product-enquiry.index', $slug)
             ->with('success', 'Thank you! We have received your enquiry.');

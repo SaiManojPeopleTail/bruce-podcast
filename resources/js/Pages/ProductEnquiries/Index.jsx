@@ -2,8 +2,8 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import DangerButton from '@/Components/DangerButton';
 import Modal from '@/Components/Modal';
 import PrimaryButton from '@/Components/PrimaryButton';
-import { Head, Link, router } from '@inertiajs/react';
-import { ChevronDown, Copy, Download, Eye } from 'lucide-react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
+import { ChevronDown, Copy, Download, Eye, Mail } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
@@ -45,6 +45,40 @@ function serialNumber(pagination, index) {
     const page = Number(pagination?.current_page ?? 1);
     const perPage = Number(pagination?.per_page ?? 15);
     return (page - 1) * perPage + index + 1;
+}
+
+function hasProductNotifyEmail(row) {
+    return Boolean(row?.product_notification_email?.trim?.());
+}
+
+function notifyStatusLabel(row) {
+    if (!hasProductNotifyEmail(row)) return 'NA';
+    switch (row.notification_status) {
+        case 'sent':
+            return 'Sent';
+        case 'failed':
+            return 'Failed';
+        case 'pending':
+            return 'Queued';
+        default:
+            return 'NA';
+    }
+}
+
+function notifyStatusBadgeClass(row) {
+    if (!hasProductNotifyEmail(row)) {
+        return 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300';
+    }
+    switch (row.notification_status) {
+        case 'sent':
+            return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200';
+        case 'failed':
+            return 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200';
+        case 'pending':
+            return 'bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200';
+        default:
+            return 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300';
+    }
 }
 
 function DetailModal({ row, onClose }) {
@@ -114,6 +148,27 @@ function DetailModal({ row, onClose }) {
                     </dd>
                 </div>
                 <div>
+                    <dt className="font-medium text-gray-500 dark:text-slate-400">Staff notification email</dt>
+                    <dd className="mt-1 text-gray-900 dark:text-slate-100">
+                        {row.product_notification_email?.trim() ? row.product_notification_email : '—'}
+                    </dd>
+                </div>
+                <div>
+                    <dt className="font-medium text-gray-500 dark:text-slate-400">Notification status</dt>
+                    <dd className="mt-1">
+                        <span
+                            className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${notifyStatusBadgeClass(row)}`}
+                        >
+                            {notifyStatusLabel(row)}
+                        </span>
+                        {row.notification_status === 'failed' && row.notification_error ? (
+                            <p className="mt-2 whitespace-pre-wrap rounded border border-red-200 bg-red-50/80 p-2 text-xs text-red-800 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-200">
+                                {row.notification_error}
+                            </p>
+                        ) : null}
+                    </dd>
+                </div>
+                <div>
                     <dt className="font-medium text-gray-500 dark:text-slate-400">Submitted</dt>
                     <dd className="mt-1 text-gray-700 dark:text-slate-300">{formatDate(row.created_at)}</dd>
                 </div>
@@ -123,6 +178,7 @@ function DetailModal({ row, onClose }) {
 }
 
 export default function Index({ enquiries, filters, enquiriesExportAllCount = 0 }) {
+    const page = usePage();
     const [search, setSearch] = useState(filters?.search ?? '');
     const [deleteId, setDeleteId] = useState(null);
     const [viewRow, setViewRow] = useState(null);
@@ -139,11 +195,13 @@ export default function Index({ enquiries, filters, enquiriesExportAllCount = 0 
     const [bulkDeleting, setBulkDeleting] = useState(false);
     const [selectAllMatchingLoading, setSelectAllMatchingLoading] = useState(false);
     const [selectMenuPosition, setSelectMenuPosition] = useState(null);
+    const [resendingId, setResendingId] = useState(null);
 
     const todayMax = useMemo(() => localDateInputMax(), []);
     const rangeCountRequestId = useRef(0);
     const headerCheckboxRef = useRef(null);
     const selectMenuButtonRef = useRef(null);
+    const prevFlashKeyRef = useRef('');
 
     const rows = enquiries?.data ?? [];
     const pageRowIds = useMemo(() => rows.map((r) => r.id), [rows]);
@@ -161,6 +219,38 @@ export default function Index({ enquiries, filters, enquiriesExportAllCount = 0 
     useEffect(() => {
         setSelectedIds([]);
     }, [filters?.search]);
+
+    useEffect(() => {
+        const s = page.props.flash?.success ?? '';
+        const err = page.props.flash?.error ?? '';
+        if (!s && !err) {
+            prevFlashKeyRef.current = '';
+            return;
+        }
+        const key = `${s}|${err}`;
+        if (key === prevFlashKeyRef.current) {
+            return;
+        }
+        prevFlashKeyRef.current = key;
+        if (s) {
+            toast.success(s);
+        }
+        if (err) {
+            toast.error(err);
+        }
+    }, [page.props.flash]);
+
+    const resendNotification = (id) => {
+        setResendingId(id);
+        router.post(
+            route('product-enquiries.resend-notification', id),
+            {},
+            {
+                preserveScroll: true,
+                onFinish: () => setResendingId(null),
+            },
+        );
+    };
 
     const updateSelectMenuPosition = useCallback(() => {
         const el = selectMenuButtonRef.current;
@@ -599,12 +689,12 @@ export default function Index({ enquiries, filters, enquiriesExportAllCount = 0 
                                                 </div>
                                             </div>
                                         </th>
-                                        {['Product', 'Name', 'Store name', 'Email', 'Phone', 'Submitted', 'Actions'].map((h, i) => (
+                                        {['Product', 'Name', 'Store name', 'Email', 'Phone', 'Notify', 'Submitted', 'Actions'].map((h, i) => (
                                             <th
                                                 key={h}
                                                 scope="col"
                                                 className={`px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-slate-400 ${
-                                                    i === 6 ? 'text-right' : 'text-left'
+                                                    i === 7 ? 'text-right' : 'text-left'
                                                 }`}
                                             >
                                                 {h}
@@ -644,11 +734,38 @@ export default function Index({ enquiries, filters, enquiriesExportAllCount = 0 
                                             <td className="whitespace-nowrap px-4 py-4 text-sm text-gray-600 dark:text-slate-300">
                                                 {r.phone}
                                             </td>
+                                            <td className="max-w-[9rem] px-4 py-4 text-sm">
+                                                <span
+                                                    className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${notifyStatusBadgeClass(r)}`}
+                                                >
+                                                    {notifyStatusLabel(r)}
+                                                </span>
+                                                {r.notification_status === 'failed' && r.notification_error ? (
+                                                    <p
+                                                        className="mt-1 line-clamp-2 text-xs text-red-600 dark:text-red-400"
+                                                        title={r.notification_error}
+                                                    >
+                                                        {r.notification_error}
+                                                    </p>
+                                                ) : null}
+                                            </td>
                                             <td className="whitespace-nowrap px-4 py-4 text-sm tabular-nums text-gray-600 dark:text-slate-300">
                                                 {formatDate(r.created_at)}
                                             </td>
                                             <td className="whitespace-nowrap px-4 py-4 text-right">
-                                                <div className="flex justify-end gap-2">
+                                                <div className="flex flex-wrap justify-end gap-2">
+                                                    {hasProductNotifyEmail(r) && r.notification_status !== 'sent' ? (
+                                                        <button
+                                                            type="button"
+                                                            disabled={resendingId === r.id}
+                                                            onClick={() => resendNotification(r.id)}
+                                                            className="inline-flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-800 shadow-sm hover:bg-gray-50 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                                                            title="Queue notification email again"
+                                                        >
+                                                            <Mail className="h-4 w-4" />
+                                                            {resendingId === r.id ? 'Sending…' : 'Send'}
+                                                        </button>
+                                                    ) : null}
                                                     <button
                                                         type="button"
                                                         onClick={() => setViewRow(r)}

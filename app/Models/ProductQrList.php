@@ -10,6 +10,7 @@ class ProductQrList extends Model
     protected $fillable = [
         'slug',
         'product_name',
+        'notification_email',
         'product_images',
         'product_description',
         'video_url',

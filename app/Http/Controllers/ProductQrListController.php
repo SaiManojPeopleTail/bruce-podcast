@@ -193,9 +193,16 @@ class ProductQrListController extends Controller
     {
         $this->ensureS3Ready();
 
+        $request->merge([
+            'notification_email' => is_string($request->input('notification_email'))
+                ? trim($request->input('notification_email'))
+                : $request->input('notification_email'),
+        ]);
+
         $validated = $request->validate([
             'product_name' => ['required', 'string', 'max:255'],
             'slug' => ['required', 'string', 'max:255', 'unique:product_qr_lists,slug'],
+            'notification_email' => ['nullable', 'string', 'max:255', 'email:rfc,strict,spoof'],
             'product_description' => ['nullable', 'string'],
             'images' => ['nullable', 'array', 'max:5'],
             'images.*' => ['file', 'image', 'max:10240'],
@@ -220,6 +227,9 @@ class ProductQrListController extends Controller
         ProductQrList::create([
             'product_name' => $validated['product_name'],
             'slug' => $slug,
+            'notification_email' => filled($validated['notification_email'] ?? null)
+                ? $validated['notification_email']
+                : null,
             'product_description' => $validated['product_description'] ?? null,
             'product_images' => ! empty($imageUrls) ? $imageUrls : null,
             'video_url' => $videoUrl,
@@ -253,11 +263,15 @@ class ProductQrListController extends Controller
 
         $request->merge([
             'slug' => Str::slug((string) $request->input('slug', '')),
+            'notification_email' => is_string($request->input('notification_email'))
+                ? trim($request->input('notification_email'))
+                : $request->input('notification_email'),
         ]);
 
         $validated = $request->validate([
             'product_name' => ['required', 'string', 'max:255'],
             'slug' => ['required', 'string', 'max:255', Rule::unique('product_qr_lists', 'slug')->ignore($productQrList->id)],
+            'notification_email' => ['nullable', 'string', 'max:255', 'email:rfc,strict,spoof'],
             'product_description' => ['nullable', 'string'],
             'images' => ['nullable', 'array', 'max:5'],
             'images.*' => ['file', 'image', 'max:10240'],
@@ -324,6 +338,9 @@ class ProductQrListController extends Controller
         $productQrList->update([
             'product_name' => $validated['product_name'],
             'slug' => $newSlug,
+            'notification_email' => filled($validated['notification_email'] ?? null)
+                ? $validated['notification_email']
+                : null,
             'product_description' => $validated['product_description'] ?? null,
             'product_images' => ! empty($imageUrls) ? $imageUrls : null,
             'video_url' => $videoUrl,

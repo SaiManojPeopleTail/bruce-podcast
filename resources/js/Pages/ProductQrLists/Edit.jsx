@@ -63,6 +63,7 @@ export default function Edit({ product }) {
     const [pendingVideoDelete, setPendingVideoDelete] = useState(false);
     const [video, setVideo] = useState(null);
     const [videoName, setVideoName] = useState('');
+    const [notificationEmail, setNotificationEmail] = useState(product.notification_email ?? '');
 
     const [errors, setErrors] = useState({});
     const [processing, setProcessing] = useState(false);
@@ -219,9 +220,10 @@ export default function Edit({ product }) {
         }
 
         const fd = new FormData();
-        fd.append('_method', 'PUT');
+        fd.append('_method', 'PATCH');
         fd.append('product_name', productName.trim());
         fd.append('slug', slug);
+        fd.append('notification_email', notificationEmail.trim());
         fd.append('product_description', description || '');
         if (qrBase64) fd.append('generated_qr_code_base64', qrBase64);
 
@@ -338,6 +340,20 @@ export default function Edit({ product }) {
                                 />
                             </div>
                             <InputError message={errors.product_description} className="mt-1" />
+                        </div>
+
+                        <div>
+                            <InputLabel htmlFor="notification_email" value="Notification email (optional)" />
+                            <input
+                                id="notification_email"
+                                type="email"
+                                value={notificationEmail}
+                                onChange={(e) => setNotificationEmail(e.target.value)}
+                                placeholder="staff@example.com — receives an email when someone submits an enquiry"
+                                autoComplete="email"
+                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-slate-500 dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-400"
+                            />
+                            <InputError message={errors.notification_email} className="mt-1" />
                         </div>
 
                         {/* Product Images */}

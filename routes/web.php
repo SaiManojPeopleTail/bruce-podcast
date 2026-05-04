@@ -169,6 +169,7 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () {
     Route::post('/product-enquiries/bulk-destroy', [ProductEnquirySubmissionController::class, 'bulkDestroy'])->name('product-enquiries.bulk-destroy');
     Route::match(['get', 'post'], '/product-enquiries/export', [ProductEnquirySubmissionController::class, 'export'])->name('product-enquiries.export');
     Route::get('/product-enquiries/export-range-count', [ProductEnquirySubmissionController::class, 'exportRangeCount'])->name('product-enquiries.export-range-count');
+    Route::post('/product-enquiries/{productEnquiry}/resend-notification', [ProductEnquirySubmissionController::class, 'resendNotification'])->name('product-enquiries.resend-notification');
     Route::delete('/product-enquiries/{productEnquiry}', [ProductEnquirySubmissionController::class, 'destroy'])->name('product-enquiries.destroy');
 
     Route::get('/product-qr-lists', [ProductQrListController::class, 'index'])->name('product-qr-lists.index');
