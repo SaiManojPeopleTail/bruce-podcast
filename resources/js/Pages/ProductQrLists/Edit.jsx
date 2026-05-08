@@ -6,7 +6,7 @@ import RichTextEditor from '@/Components/RichTextEditor';
 import { Head, router } from '@inertiajs/react';
 import { ReactQRCode } from '@lglab/react-qr-code';
 import axios from 'axios';
-import { CheckCircle, ImagePlus, Loader2, Video, X, XCircle } from 'lucide-react';
+import { CheckCircle, Film, ImagePlus, Loader2, Video, X, XCircle } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 
@@ -15,7 +15,18 @@ const QR_SETTINGS = {
     finderPatternOuterSettings: { style: 'rounded-sm' },
     finderPatternInnerSettings: { style: 'rounded-sm' },
 };
-const MAX_IMAGES = 5;
+const MAX_MEDIA = 20;
+const GALLERY_VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/webm', 'video/x-matroska'];
+
+function isVideoFile(file) {
+    return GALLERY_VIDEO_TYPES.includes(file.type) || /\.(mp4|mov|avi|webm|mkv|m4v)$/i.test(file.name);
+}
+
+function isVideoUrl(url) {
+    if (!url) return false;
+    const path = url.split('?')[0].toLowerCase();
+    return /\.(mp4|mov|avi|webm|mkv|m4v|ogv)(\b|$)/.test(path);
+}
 
 async function captureQrAsPng(svgEl) {
     if (!svgEl) return null;
@@ -54,8 +65,12 @@ export default function Edit({ product }) {
     });
     const [pendingRemoveIdx, setPendingRemoveIdx] = useState(null);
     // New files to upload
-    const [newImages, setNewImages] = useState([]);
-    const [newImagePreviews, setNewImagePreviews] = useState([]);
+    const [newMediaFiles, setNewMediaFiles] = useState([]); // File[]
+    const [newMediaPreviews, setNewMediaPreviews] = useState([]); // {url, type}[]
+    const newMediaObjectUrlsRef = useRef([]);
+
+    // Revoke new-file object URLs on unmount
+    useEffect(() => () => { newMediaObjectUrlsRef.current.forEach(URL.revokeObjectURL); }, []);
 
     const existingVideoUrl = product.video_url ?? null;
     /** True after user confirms delete; video is removed from S3 on save unless a new file is uploaded. */
@@ -67,7 +82,7 @@ export default function Edit({ product }) {
 
     const [errors, setErrors] = useState({});
     const [processing, setProcessing] = useState(false);
-    const [draggingImages, setDraggingImages] = useState(false);
+    const [draggingMedia, setDraggingMedia] = useState(false);
     const [draggingVideo, setDraggingVideo] = useState(false);
 
     const [slug, setSlug] = useState(product.slug ?? '');
@@ -130,21 +145,23 @@ export default function Edit({ product }) {
         return null;
     };
 
-    const totalImages = existingImages.length + newImages.length;
+    const totalMedia = existingImages.length + newMediaFiles.length;
 
-    const handleNewImagesChange = (e) => {
-        const files = Array.from(e.target.files || []);
-        const remaining = MAX_IMAGES - totalImages;
+    const addNewMediaFiles = (files) => {
+        const remaining = MAX_MEDIA - totalMedia;
         const toAdd = files.slice(0, remaining);
         if (!toAdd.length) return;
-
-        setNewImages((prev) => [...prev, ...toAdd]);
-        toAdd.forEach((file) => {
-            const reader = new FileReader();
-            reader.onload = (ev) =>
-                setNewImagePreviews((prev) => [...prev, ev.target.result]);
-            reader.readAsDataURL(file);
+        const previews = toAdd.map((file) => {
+            const url = URL.createObjectURL(file);
+            newMediaObjectUrlsRef.current.push(url);
+            return { url, type: isVideoFile(file) ? 'video' : 'image' };
         });
+        setNewMediaFiles((prev) => [...prev, ...toAdd]);
+        setNewMediaPreviews((prev) => [...prev, ...previews]);
+    };
+
+    const handleNewMediaChange = (e) => {
+        addNewMediaFiles(Array.from(e.target.files || []));
         e.target.value = '';
     };
 
@@ -154,9 +171,13 @@ export default function Edit({ product }) {
         setPendingRemoveIdx(null);
     };
 
-    const removeNewImage = (index) => {
-        setNewImages((prev) => prev.filter((_, i) => i !== index));
-        setNewImagePreviews((prev) => prev.filter((_, i) => i !== index));
+    const removeNewMedia = (index) => {
+        setNewMediaFiles((prev) => prev.filter((_, i) => i !== index));
+        setNewMediaPreviews((prev) => {
+            const removed = prev[index];
+            if (removed?.url) URL.revokeObjectURL(removed.url);
+            return prev.filter((_, i) => i !== index);
+        });
     };
 
     const handleVideoChange = (e) => {
@@ -168,20 +189,14 @@ export default function Edit({ product }) {
         }
     };
 
-    const handleImagesDrop = (e) => {
+    const handleMediaDrop = (e) => {
         e.preventDefault();
-        setDraggingImages(false);
-        if (totalImages >= MAX_IMAGES) return;
-        const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('image/'));
-        if (!files.length) return;
-        const remaining = MAX_IMAGES - totalImages;
-        const toAdd = files.slice(0, remaining);
-        setNewImages((prev) => [...prev, ...toAdd]);
-        toAdd.forEach((file) => {
-            const reader = new FileReader();
-            reader.onload = (ev) => setNewImagePreviews((prev) => [...prev, ev.target.result]);
-            reader.readAsDataURL(file);
-        });
+        setDraggingMedia(false);
+        if (totalMedia >= MAX_MEDIA) return;
+        const files = Array.from(e.dataTransfer.files).filter(
+            (f) => f.type.startsWith('image/') || isVideoFile(f),
+        );
+        addNewMediaFiles(files);
     };
 
     const handleVideoDrop = (e) => {
@@ -228,7 +243,7 @@ export default function Edit({ product }) {
         if (qrBase64) fd.append('generated_qr_code_base64', qrBase64);
 
         existingImages.forEach((url, i) => fd.append(`existing_images[${i}]`, url));
-        newImages.forEach((file, i) => fd.append(`images[${i}]`, file));
+        newMediaFiles.forEach((file, i) => fd.append(`images[${i}]`, file));
         if (video) {
             fd.append('video', video);
         } else if (videoRemovedPending) {
@@ -356,39 +371,65 @@ export default function Edit({ product }) {
                             <InputError message={errors.notification_email} className="mt-1" />
                         </div>
 
-                        {/* Product Images */}
+                        {/* Product Media (images + videos) */}
                         <div>
                             <div className="mb-2 flex items-center justify-between">
-                                <InputLabel value={`Product Images (up to ${MAX_IMAGES})`} />
+                                <InputLabel value={`Product Media (up to ${MAX_MEDIA})`} />
                                 <span className="text-xs text-gray-500 dark:text-slate-400">
-                                    {totalImages} / {MAX_IMAGES}
+                                    {totalMedia} / {MAX_MEDIA}
                                 </span>
                             </div>
 
-                            {(existingImages.length > 0 || newImagePreviews.length > 0) && (
+                            {(existingImages.length > 0 || newMediaPreviews.length > 0) && (
                                 <div className="mb-3 flex flex-wrap gap-3">
-                                    {existingImages.map((canonicalUrl, i) => (
-                                        <div key={canonicalUrl || `existing-${i}`} className="group relative h-24 w-24 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 shadow-sm dark:border-slate-600 dark:bg-slate-700">
-                                            <img src={existingImageDisplaySrc[i] ?? canonicalUrl} alt="" className="h-full w-full object-cover" />
-                                            <button
-                                                type="button"
-                                                onClick={() => setPendingRemoveIdx(i)}
-                                                className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity group-hover:opacity-100"
-                                                aria-label="Remove image"
-                                            >
-                                                <X className="h-3.5 w-3.5" />
-                                            </button>
-                                        </div>
-                                    ))}
-                                    {newImagePreviews.map((src, i) => (
+                                    {existingImages.map((canonicalUrl, i) => {
+                                        const displaySrc = existingImageDisplaySrc[i] ?? canonicalUrl;
+                                        const isVid = isVideoUrl(displaySrc);
+                                        return (
+                                            <div key={canonicalUrl || `existing-${i}`} className="group relative h-24 w-24 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 shadow-sm dark:border-slate-600 dark:bg-slate-700">
+                                                {isVid ? (
+                                                    <>
+                                                        <video src={displaySrc} muted preload="metadata" className="h-full w-full object-cover" />
+                                                        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                                                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black/55">
+                                                                <Film className="h-4 w-4 text-white" />
+                                                            </div>
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <img src={displaySrc} alt="" className="h-full w-full object-cover" />
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setPendingRemoveIdx(i)}
+                                                    className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                                                    aria-label="Remove"
+                                                >
+                                                    <X className="h-3.5 w-3.5" />
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                    {newMediaPreviews.map((item, i) => (
                                         <div key={`new-${i}`} className="group relative h-24 w-24 overflow-hidden rounded-lg border border-indigo-200 bg-gray-50 shadow-sm dark:border-indigo-700 dark:bg-slate-700">
-                                            <img src={src} alt="" className="h-full w-full object-cover" />
+                                            {item.type === 'video' ? (
+                                                <>
+                                                    <video src={item.url} muted preload="metadata" className="h-full w-full object-cover" />
+                                                    <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                                                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black/55">
+                                                            <Film className="h-4 w-4 text-white" />
+                                                        </div>
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <img src={item.url} alt="" className="h-full w-full object-cover" />
+                                            )}
                                             <span className="absolute bottom-0 left-0 right-0 bg-indigo-600/70 py-0.5 text-center text-[9px] text-white">new</span>
                                             <button
                                                 type="button"
-                                                onClick={() => removeNewImage(i)}
+                                                onClick={() => removeNewMedia(i)}
                                                 className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity group-hover:opacity-100"
-                                                aria-label="Remove image"
+                                                aria-label="Remove"
                                             >
                                                 <X className="h-3.5 w-3.5" />
                                             </button>
@@ -397,33 +438,33 @@ export default function Edit({ product }) {
                                 </div>
                             )}
 
-                            {totalImages < MAX_IMAGES && (
+                            {totalMedia < MAX_MEDIA && (
                                 <label
                                     className={`flex cursor-pointer items-center gap-3 rounded-lg border border-dashed px-4 py-4 transition ${
-                                        draggingImages
+                                        draggingMedia
                                             ? 'border-indigo-500 bg-indigo-50/60 dark:border-indigo-400 dark:bg-indigo-900/20'
                                             : 'border-gray-300 bg-gray-50 hover:border-indigo-400 hover:bg-indigo-50/30 dark:border-slate-500 dark:bg-slate-700/50 dark:hover:border-indigo-400 dark:hover:bg-slate-700'
                                     }`}
-                                    onDragOver={(e) => { e.preventDefault(); setDraggingImages(true); }}
-                                    onDragEnter={(e) => { e.preventDefault(); setDraggingImages(true); }}
-                                    onDragLeave={() => setDraggingImages(false)}
-                                    onDrop={handleImagesDrop}
+                                    onDragOver={(e) => { e.preventDefault(); setDraggingMedia(true); }}
+                                    onDragEnter={(e) => { e.preventDefault(); setDraggingMedia(true); }}
+                                    onDragLeave={() => setDraggingMedia(false)}
+                                    onDrop={handleMediaDrop}
                                 >
-                                    <ImagePlus className={`h-5 w-5 ${draggingImages ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-slate-300'}`} />
+                                    <ImagePlus className={`h-5 w-5 shrink-0 ${draggingMedia ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-slate-300'}`} />
                                     <span className="text-sm text-gray-600 dark:text-slate-300">
-                                        {draggingImages ? 'Drop images here' : (
+                                        {draggingMedia ? 'Drop files here' : (
                                             <>
-                                                Click or drag to add image{totalImages < MAX_IMAGES - 1 ? 's' : ''}{' '}
-                                                <span className="text-gray-400 dark:text-slate-500">· JPG, PNG, WebP · max 10 MB each</span>
+                                                Click or drag to add images or videos{' '}
+                                                <span className="text-gray-400 dark:text-slate-500">· JPG, PNG, MP4, MOV, WebM · images max 10 MB, videos max 200 MB</span>
                                             </>
                                         )}
                                     </span>
                                     <input
                                         type="file"
-                                        accept="image/*"
+                                        accept="image/*,video/mp4,video/quicktime,video/x-msvideo,video/webm,video/x-matroska"
                                         multiple
                                         className="sr-only"
-                                        onChange={handleNewImagesChange}
+                                        onChange={handleNewMediaChange}
                                     />
                                 </label>
                             )}
@@ -537,10 +578,10 @@ export default function Edit({ product }) {
                             <X className="h-5 w-5 text-red-600 dark:text-red-400" />
                         </div>
                         <h3 className="mb-1 text-base font-semibold text-gray-900 dark:text-slate-100">
-                            Remove this image?
+                            Remove this file?
                         </h3>
                         <p className="mb-5 text-sm text-gray-500 dark:text-slate-400">
-                            This image will be <strong className="text-gray-700 dark:text-slate-200">permanently deleted from storage</strong> when you save the form. This cannot be undone.
+                            This file will be <strong className="text-gray-700 dark:text-slate-200">permanently deleted from storage</strong> when you save the form. This cannot be undone.
                         </p>
                         <div className="flex justify-end gap-3">
                             <button

@@ -2,7 +2,7 @@ import { AdminFlashToasts, AdminToaster } from '@/Components/AdminToastHost';
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import Dropdown from '@/Components/Dropdown';
 import { Link, usePage } from '@inertiajs/react';
-import { Inbox, QrCode } from 'lucide-react';
+import { Inbox, QrCode, ShoppingBag, ShoppingCart } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 const STORAGE_KEY = 'theme';
@@ -190,6 +190,14 @@ export default function AuthenticatedLayout({ header, children }) {
                         <NavItem href={route('product-enquiries.index')} active={route().current('product-enquiries.*')}>
                             <Inbox className="h-5 w-5 shrink-0" />
                             Product Enquiries
+                        </NavItem>
+                        <NavItem href={route('merch-products.index')} active={route().current('merch-products.*')}>
+                            <ShoppingBag className="h-5 w-5 shrink-0" />
+                            Merch Products
+                        </NavItem>
+                        <NavItem href={route('merch-orders.index')} active={route().current('merch-orders.*')}>
+                            <ShoppingCart className="h-5 w-5 shrink-0" />
+                            Merch Orders
                         </NavItem>
 
                         {user.id < 3 && (

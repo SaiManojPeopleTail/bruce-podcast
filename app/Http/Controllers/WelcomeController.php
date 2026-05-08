@@ -5,9 +5,11 @@ namespace App\Http\Controllers;
 use App\Meta;
 use App\Models\Brand;
 use App\Models\Episode;
+use App\Models\MerchProduct;
 use App\Models\Page;
 use App\Models\Personality;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 
 class WelcomeController extends Controller
@@ -26,12 +28,13 @@ class WelcomeController extends Controller
      */
     protected function youtubeThumbnailUrl(?string $videoUrl): ?string
     {
-        if (!$videoUrl) {
+        if (! $videoUrl) {
             return null;
         }
         if (preg_match('#(?:youtube\.com/watch\?v=|youtu\.be/)([a-zA-Z0-9_-]{11})#', $videoUrl, $m)) {
-            return 'https://img.youtube.com/vi/' . $m[1] . '/maxresdefault.jpg';
+            return 'https://img.youtube.com/vi/'.$m[1].'/maxresdefault.jpg';
         }
+
         return null;
     }
 
@@ -48,7 +51,7 @@ class WelcomeController extends Controller
 
         $home = Page::findBySlug('home');
         $page = Page::findBySlug($slug);
-        if (!$page && !$home) {
+        if (! $page && ! $home) {
             return;
         }
 
@@ -83,18 +86,33 @@ class WelcomeController extends Controller
         return Episode::orderByDesc('created_at')->get();
     }
 
-
     public function index()
     {
         $this->applyPageMeta('home');
 
         $paginator = Episode::orderByDesc('created_at')->paginate(self::VIDEOS_PER_PAGE);
 
+        $featuredMerch = Cache::remember('merch.featured', now()->addMinutes(30), function () {
+            return MerchProduct::where('is_visible', true)
+                ->inRandomOrder()
+                ->limit(4)
+                ->get()
+                ->map(fn ($p) => [
+                    'id' => $p->id,
+                    'slug' => $p->slug,
+                    'title' => $p->title,
+                    'images' => $p->images,
+                    'starting_price' => $p->startingPrice(),
+                    'has_sale' => $p->hasSale(),
+                ]);
+        });
+
         return Inertia::render('Welcome', [
             'videos' => $paginator->items(),
             'current_time_and_date' => now()->format('Y-m-d H:i:s'),
             'nextPage' => $paginator->hasMorePages() ? $paginator->currentPage() + 1 : null,
             'hasMore' => $paginator->hasMorePages(),
+            'featuredMerch' => $featuredMerch,
         ]);
     }
 

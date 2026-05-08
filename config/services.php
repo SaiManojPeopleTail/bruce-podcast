@@ -46,4 +46,27 @@ return [
         'audience_id' => env('MAILCHIP_AUDIENCE_ID', env('MAILCHIMP_AUDIENCE_ID')),
     ],
 
+    'printify' => [
+        'token' => env('PRINTIFY_API_TOKEN'),
+        'shop_id' => env('PRINTIFY_SHOP_ID'),
+        'base_url' => 'https://api.printify.com/v1',
+    ],
+
+    'stripe' => [
+        'key' => env('STRIPE_PUBLISHABLE_KEY'),
+        'secret' => env('STRIPE_SECRET_KEY'),
+        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+    ],
+
+    /*
+    | Comma-separated admin emails for new merch order notifications (paid orders).
+    | Example: MERCH_ORDERS_NOTIFY_EMAILS=ops@example.com,manager@example.com
+    */
+    'merch' => [
+        'orders_notify_emails' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('MERCH_ORDERS_NOTIFY_EMAILS', '')),
+        ))),
+    ],
+
 ];

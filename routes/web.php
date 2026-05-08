@@ -2,9 +2,13 @@
 
 use App\Http\Controllers\BrandController;
 use App\Http\Controllers\BrandsViewController;
+use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\ClipController;
 use App\Http\Controllers\EpisodeController;
 use App\Http\Controllers\EpisodesViewController;
+use App\Http\Controllers\MerchController;
+use App\Http\Controllers\MerchOrderController;
+use App\Http\Controllers\MerchProductController;
 use App\Http\Controllers\NewsletterController;
 use App\Http\Controllers\PersonalityController;
 use App\Http\Controllers\ProductEnquiryController;
@@ -17,6 +21,7 @@ use App\Http\Controllers\RetailersViewController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\SiteSettingsController;
 use App\Http\Controllers\SponsorVideoController;
+use App\Http\Controllers\StripeWebhookController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WelcomeController;
 use Illuminate\Http\Request;
@@ -26,6 +31,29 @@ use Inertia\Inertia;
 
 Route::get('/robots.txt', [SitemapController::class, 'robots'])->name('robots');
 Route::get('/sitemap.xml', [SitemapController::class, 'sitemap'])->name('sitemap');
+
+// Stripe webhook — must be before CSRF middleware, no auth needed
+Route::post('/webhooks/stripe', [StripeWebhookController::class, 'handle'])
+    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class])
+    ->name('webhooks.stripe');
+
+// Public merch storefront
+Route::prefix('merch')->name('merch.')->group(function () {
+    Route::get('/', [MerchController::class, 'index'])->name('index');
+    Route::get('/track', [MerchController::class, 'trackForm'])->name('track');
+    Route::post('/track', [MerchController::class, 'trackLookup'])->name('track.lookup');
+    Route::get('/{slug}', [MerchController::class, 'show'])->name('show');
+});
+
+// Checkout
+Route::prefix('checkout')->name('checkout.')->group(function () {
+    Route::get('/', [CheckoutController::class, 'index'])->name('index');
+    Route::post('/initiate', [CheckoutController::class, 'initiate'])->name('initiate');
+    Route::get('/lookup-order/{paymentIntentId}', [CheckoutController::class, 'lookupOrderByPaymentIntent'])
+        ->name('lookup-order')
+        ->where('paymentIntentId', 'pi_[a-zA-Z0-9_]+');
+    Route::get('/confirmation/{token}', [CheckoutController::class, 'confirmation'])->name('confirmation');
+});
 
 Route::get('/', [WelcomeController::class, 'index'])->name('welcome');
 Route::get('/api/videos/more', [WelcomeController::class, 'videosMore'])->name('api.videos.more');
@@ -179,6 +207,23 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () {
     Route::get('/product-qr-lists/{productQrList}/edit', [ProductQrListController::class, 'edit'])->name('product-qr-lists.edit');
     Route::patch('/product-qr-lists/{productQrList}', [ProductQrListController::class, 'update'])->name('product-qr-lists.update');
     Route::delete('/product-qr-lists/{productQrList}', [ProductQrListController::class, 'destroy'])->name('product-qr-lists.destroy');
+
+    // Merch products (admin)
+    Route::get('/merch-products', [MerchProductController::class, 'index'])->name('merch-products.index');
+    Route::post('/merch-products/preview', [MerchProductController::class, 'preview'])->name('merch-products.preview');
+    Route::post('/merch-products/toggle', [MerchProductController::class, 'toggle'])->name('merch-products.toggle');
+    Route::post('/merch-products/{merchProduct}/visibility', [MerchProductController::class, 'toggleVisibility'])->name('merch-products.visibility');
+    Route::get('/merch-products/{merchProduct}/edit', [MerchProductController::class, 'edit'])->name('merch-products.edit');
+    Route::patch('/merch-products/{merchProduct}', [MerchProductController::class, 'update'])->name('merch-products.update');
+    Route::delete('/merch-products/{merchProduct}', [MerchProductController::class, 'destroy'])->name('merch-products.destroy');
+    Route::post('/merch-products/{merchProduct}/refresh', [MerchProductController::class, 'refresh'])->name('merch-products.refresh');
+
+    // Merch orders (admin)
+    Route::get('/merch-orders', [MerchOrderController::class, 'index'])->name('merch-orders.index');
+    Route::get('/merch-orders/{merchOrder}', [MerchOrderController::class, 'show'])->name('merch-orders.show');
+    Route::post('/merch-orders/{merchOrder}/resend-email', [MerchOrderController::class, 'resendEmail'])
+        ->middleware('throttle:30,1')
+        ->name('merch-orders.resend-email');
 });
 
 require __DIR__.'/auth.php';

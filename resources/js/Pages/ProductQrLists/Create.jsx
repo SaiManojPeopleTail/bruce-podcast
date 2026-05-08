@@ -6,7 +6,7 @@ import RichTextEditor from '@/Components/RichTextEditor';
 import { Head, router } from '@inertiajs/react';
 import { ReactQRCode } from '@lglab/react-qr-code';
 import axios from 'axios';
-import { CheckCircle, ImagePlus, Loader2, Video, X, XCircle } from 'lucide-react';
+import { CheckCircle, Film, ImagePlus, Loader2, Video, X, XCircle } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 
@@ -15,7 +15,12 @@ const QR_SETTINGS = {
     finderPatternOuterSettings: { style: 'rounded-sm' },
     finderPatternInnerSettings: { style: 'rounded-sm' },
 };
-const MAX_IMAGES = 5;
+const MAX_MEDIA = 20;
+const GALLERY_VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/webm', 'video/x-matroska'];
+
+function isVideoFile(file) {
+    return GALLERY_VIDEO_TYPES.includes(file.type) || /\.(mp4|mov|avi|webm|mkv|m4v)$/i.test(file.name);
+}
 
 function toSlug(str) {
     return str
@@ -57,15 +62,20 @@ export default function Create() {
     const [slug, setSlug] = useState('');
     const [slugStatus, setSlugStatus] = useState('idle'); // idle | checking | available | taken | empty
     const [description, setDescription] = useState('');
-    const [images, setImages] = useState([]); // File[]
-    const [imagePreviews, setImagePreviews] = useState([]); // data URL[]
+    // Gallery media: parallel arrays of File and {url, type}
+    const [mediaFiles, setMediaFiles] = useState([]); // File[]
+    const [mediaPreviews, setMediaPreviews] = useState([]); // {url: string, type: 'image'|'video'}[]
+    const mediaObjectUrlsRef = useRef([]);
     const [video, setVideo] = useState(null);
     const [videoName, setVideoName] = useState('');
     const [notificationEmail, setNotificationEmail] = useState('');
     const [errors, setErrors] = useState({});
     const [processing, setProcessing] = useState(false);
-    const [draggingImages, setDraggingImages] = useState(false);
+    const [draggingMedia, setDraggingMedia] = useState(false);
     const [draggingVideo, setDraggingVideo] = useState(false);
+
+    // Revoke object URLs on unmount
+    useEffect(() => () => { mediaObjectUrlsRef.current.forEach(URL.revokeObjectURL); }, []);
 
     const qrUrl = slug
         ? `${window.location.origin}/product/${slug}`
@@ -108,27 +118,31 @@ export default function Create() {
         if (slugTimerRef.current) clearTimeout(slugTimerRef.current);
     }, []);
 
-    const handleImagesChange = (e) => {
-        const files = Array.from(e.target.files || []);
-        const remaining = MAX_IMAGES - images.length;
+    const addMediaFiles = (files) => {
+        const remaining = MAX_MEDIA - mediaFiles.length;
         const toAdd = files.slice(0, remaining);
         if (!toAdd.length) return;
-
-        const newImages = [...images, ...toAdd];
-        setImages(newImages);
-
-        toAdd.forEach((file) => {
-            const reader = new FileReader();
-            reader.onload = (ev) =>
-                setImagePreviews((prev) => [...prev, ev.target.result]);
-            reader.readAsDataURL(file);
+        const newPreviews = toAdd.map((file) => {
+            const url = URL.createObjectURL(file);
+            mediaObjectUrlsRef.current.push(url);
+            return { url, type: isVideoFile(file) ? 'video' : 'image' };
         });
+        setMediaFiles((prev) => [...prev, ...toAdd]);
+        setMediaPreviews((prev) => [...prev, ...newPreviews]);
+    };
+
+    const handleMediaChange = (e) => {
+        addMediaFiles(Array.from(e.target.files || []));
         e.target.value = '';
     };
 
-    const removeImage = (index) => {
-        setImages((prev) => prev.filter((_, i) => i !== index));
-        setImagePreviews((prev) => prev.filter((_, i) => i !== index));
+    const removeMediaItem = (index) => {
+        setMediaFiles((prev) => prev.filter((_, i) => i !== index));
+        setMediaPreviews((prev) => {
+            const removed = prev[index];
+            if (removed?.url) URL.revokeObjectURL(removed.url);
+            return prev.filter((_, i) => i !== index);
+        });
     };
 
     const handleVideoChange = (e) => {
@@ -137,20 +151,14 @@ export default function Create() {
         setVideoName(file?.name ?? '');
     };
 
-    const handleImagesDrop = (e) => {
+    const handleMediaDrop = (e) => {
         e.preventDefault();
-        setDraggingImages(false);
-        if (images.length >= MAX_IMAGES) return;
-        const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('image/'));
-        if (!files.length) return;
-        const remaining = MAX_IMAGES - images.length;
-        const toAdd = files.slice(0, remaining);
-        setImages((prev) => [...prev, ...toAdd]);
-        toAdd.forEach((file) => {
-            const reader = new FileReader();
-            reader.onload = (ev) => setImagePreviews((prev) => [...prev, ev.target.result]);
-            reader.readAsDataURL(file);
-        });
+        setDraggingMedia(false);
+        if (mediaFiles.length >= MAX_MEDIA) return;
+        const files = Array.from(e.dataTransfer.files).filter(
+            (f) => f.type.startsWith('image/') || isVideoFile(f),
+        );
+        addMediaFiles(files);
     };
 
     const handleVideoDrop = (e) => {
@@ -193,7 +201,7 @@ export default function Create() {
         fd.append('notification_email', notificationEmail.trim());
         fd.append('product_description', description || '');
         if (qrBase64) fd.append('generated_qr_code_base64', qrBase64);
-        images.forEach((file, i) => fd.append(`images[${i}]`, file));
+        mediaFiles.forEach((file, i) => fd.append(`images[${i}]`, file));
         if (video) fd.append('video', video);
 
         router.post(route('product-qr-lists.store'), fd, {
@@ -326,25 +334,36 @@ export default function Create() {
                             <InputError message={errors.notification_email} className="mt-1" />
                         </div>
 
-                        {/* Product Images */}
+                        {/* Product Media (images + videos) */}
                         <div>
                             <div className="mb-2 flex items-center justify-between">
-                                <InputLabel value={`Product Images (up to ${MAX_IMAGES})`} />
+                                <InputLabel value={`Product Media (up to ${MAX_MEDIA})`} />
                                 <span className="text-xs text-gray-500 dark:text-slate-400">
-                                    {images.length} / {MAX_IMAGES}
+                                    {mediaFiles.length} / {MAX_MEDIA}
                                 </span>
                             </div>
 
-                            {imagePreviews.length > 0 && (
+                            {mediaPreviews.length > 0 && (
                                 <div className="mb-3 flex flex-wrap gap-3">
-                                    {imagePreviews.map((src, i) => (
+                                    {mediaPreviews.map((item, i) => (
                                         <div key={i} className="group relative h-24 w-24 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 shadow-sm dark:border-slate-600 dark:bg-slate-700">
-                                            <img src={src} alt="" className="h-full w-full object-cover" />
+                                            {item.type === 'video' ? (
+                                                <>
+                                                    <video src={item.url} muted preload="metadata" className="h-full w-full object-cover" />
+                                                    <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                                                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black/55">
+                                                            <Film className="h-4 w-4 text-white" />
+                                                        </div>
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <img src={item.url} alt="" className="h-full w-full object-cover" />
+                                            )}
                                             <button
                                                 type="button"
-                                                onClick={() => removeImage(i)}
+                                                onClick={() => removeMediaItem(i)}
                                                 className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity group-hover:opacity-100"
-                                                aria-label="Remove image"
+                                                aria-label="Remove"
                                             >
                                                 <X className="h-3.5 w-3.5" />
                                             </button>
@@ -353,33 +372,33 @@ export default function Create() {
                                 </div>
                             )}
 
-                            {images.length < MAX_IMAGES && (
+                            {mediaFiles.length < MAX_MEDIA && (
                                 <label
                                     className={`flex cursor-pointer items-center gap-3 rounded-lg border border-dashed px-4 py-4 transition ${
-                                        draggingImages
+                                        draggingMedia
                                             ? 'border-indigo-500 bg-indigo-50/60 dark:border-indigo-400 dark:bg-indigo-900/20'
                                             : 'border-gray-300 bg-gray-50 hover:border-indigo-400 hover:bg-indigo-50/30 dark:border-slate-500 dark:bg-slate-700/50 dark:hover:border-indigo-400 dark:hover:bg-slate-700'
                                     }`}
-                                    onDragOver={(e) => { e.preventDefault(); setDraggingImages(true); }}
-                                    onDragEnter={(e) => { e.preventDefault(); setDraggingImages(true); }}
-                                    onDragLeave={() => setDraggingImages(false)}
-                                    onDrop={handleImagesDrop}
+                                    onDragOver={(e) => { e.preventDefault(); setDraggingMedia(true); }}
+                                    onDragEnter={(e) => { e.preventDefault(); setDraggingMedia(true); }}
+                                    onDragLeave={() => setDraggingMedia(false)}
+                                    onDrop={handleMediaDrop}
                                 >
-                                    <ImagePlus className={`h-5 w-5 ${draggingImages ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-slate-300'}`} />
+                                    <ImagePlus className={`h-5 w-5 shrink-0 ${draggingMedia ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-slate-300'}`} />
                                     <span className="text-sm text-gray-600 dark:text-slate-300">
-                                        {draggingImages ? 'Drop images here' : (
+                                        {draggingMedia ? 'Drop files here' : (
                                             <>
-                                                Click or drag to add image{images.length < MAX_IMAGES - 1 ? 's' : ''}{' '}
-                                                <span className="text-gray-400 dark:text-slate-500">· JPG, PNG, WebP · max 10 MB each</span>
+                                                Click or drag to add images or videos{' '}
+                                                <span className="text-gray-400 dark:text-slate-500">· JPG, PNG, MP4, MOV, WebM · images max 10 MB, videos max 200 MB</span>
                                             </>
                                         )}
                                     </span>
                                     <input
                                         type="file"
-                                        accept="image/*"
+                                        accept="image/*,video/mp4,video/quicktime,video/x-msvideo,video/webm,video/x-matroska"
                                         multiple
                                         className="sr-only"
-                                        onChange={handleImagesChange}
+                                        onChange={handleMediaChange}
                                     />
                                 </label>
                             )}

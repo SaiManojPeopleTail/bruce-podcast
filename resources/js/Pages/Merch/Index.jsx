@@ -1,12 +1,7 @@
 import MerchCartLineControls from '@/Components/MerchCartLineControls';
-import HeroVideoBackground from '@/Components/HeroVideoBackground';
-import HeroNav from '@/Components/HeroNav';
-import RecentVideos from '@/Components/RecentVideos';
-import HomeLayout from '@/Layouts/HomeLayout';
 import { useCart } from '@/Context/CartContext';
-import { useReduceMotion } from '@/hooks/useReduceMotion';
+import HomeLayout from '@/Layouts/HomeLayout';
 import { Head, Link } from '@inertiajs/react';
-import { motion } from 'framer-motion';
 import { ShoppingBag } from 'lucide-react';
 import { useMemo } from 'react';
 
@@ -20,8 +15,7 @@ function effectiveUnitPrice(variant) {
     return variant.our_price;
 }
 
-/** Matches `Merch/Index` product cards for a consistent shop look */
-function FeaturedProductCard({ product, priority = false }) {
+function ProductCard({ product, priority = false }) {
     const { items } = useCart();
     const image = product.images?.[0]?.src ?? product.images?.[0] ?? null;
     const defaultVariant = useMemo(
@@ -41,10 +35,12 @@ function FeaturedProductCard({ product, priority = false }) {
         return line?.quantity ?? 0;
     }, [items, product.printify_product_id, defaultVariant, showCart]);
 
+    /** In cart: stay in “hover” layout on desktop so quantity is always visible */
     const pinnedOpen = lineQty > 0;
 
     return (
         <div className="group flex h-full flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md">
+            {/* Image — normal state sits above white block; no footer overlap */}
             <Link
                 href={route('merch.show', product.slug)}
                 className="relative block aspect-square shrink-0 overflow-hidden bg-gray-100"
@@ -66,6 +62,7 @@ function FeaturedProductCard({ product, priority = false }) {
                 )}
             </Link>
 
+            {/* White footer: default flush under image; hover (or pinned) pulls up over image bottom; title → gold; cart row reveals */}
             <div
                 className={[
                     'relative z-10 flex flex-col gap-1.5 overflow-hidden rounded-t-2xl bg-white px-4 pb-3 pt-3',
@@ -131,94 +128,29 @@ function FeaturedProductCard({ product, priority = false }) {
     );
 }
 
-function FeaturedMerchSection({ products }) {
-    if (!products || products.length === 0) return null;
-    const featured = products.slice(0, 4);
-    return (
-        <section className="relative w-full bg-white py-16">
-            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                <div className="mb-10 text-center">
-                    <p className="text-sm font-semibold uppercase tracking-widest text-[#b59100]">Official Merch</p>
-                    <h2 className="mt-2 text-3xl font-bold text-gray-900 md:text-4xl">Shop Our Collection</h2>
-                </div>
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                    {featured.map((p, i) => (
-                        <FeaturedProductCard key={p.id} product={p} priority={i < 4} />
-                    ))}
-                </div>
-                <div className="mt-10 text-center">
-                    <Link
-                        href={route('merch.index')}
-                        className="inline-flex items-center gap-2 rounded-xl border border-[#b59100] bg-white px-6 py-3 text-sm font-semibold text-[#b59100] shadow-sm transition hover:bg-[#b59100] hover:text-white"
-                    >
-                        <ShoppingBag className="h-4 w-4" />
-                        View all merch
-                    </Link>
-                </div>
-            </div>
-        </section>
-    );
-}
-
-const heroTextVariants = {
-    hidden: { opacity: 0, y: 24 },
-    visible: (i) => ({
-        opacity: 1,
-        y: 0,
-        transition: { delay: i * 0.15 + 0.2, duration: 0.6, ease: [0.22, 1, 0.36, 1] },
-    }),
-};
-
-export default function Welcome({ videos = [], current_time_and_date = null, featuredMerch = [] }) {
-    console.log(current_time_and_date);
-
-    const reduceMotion = useReduceMotion();
-    const H2 = reduceMotion ? 'h2' : motion.h2;
-    const H1 = reduceMotion ? 'h1' : motion.h1;
-
+export default function MerchIndex({ products = [] }) {
     return (
         <HomeLayout>
-            <Head title="Welcome" />
-            <section className="relative h-[75vh] md:h-screen overflow-hidden flex flex-col">
-                <HeroVideoBackground parallax />
-                <div className="absolute inset-0 w-full max-w-7xl mx-auto flex flex-col items-center justify-center gap-2 z-10 pointer-events-none mt-[-100px] pt-10 md:pt-0">
-                    <H2
-                        className="hero-top-text text-[#ffde59] plus-jakarta-sans-700"
-                        {...(!reduceMotion && { custom: 0, variants: heroTextVariants, initial: 'hidden', animate: 'visible' })}
-                    >
-                        PODCAST
-                    </H2>
-                    <H1
-                        className="text-5xl font-bold text-white drop-shadow-lg hero-main-text text-center max-w-4xl anton-regular"
-                        {...(!reduceMotion && { custom: 1, variants: heroTextVariants, initial: 'hidden', animate: 'visible' })}
-                    >
-                        IN<br />CONVERSATION<br />WITH<br />BRUCE W. COLE
-                    </H1>
+            <Head title="Shop" />
+
+            <div className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+                <div className="mb-10 text-center">
+                    <p className="text-sm font-semibold uppercase tracking-widest text-[#b59100]">Official Merch</p>
+                    <h1 className="mt-2 text-4xl font-bold text-gray-900">Shop</h1>
                 </div>
 
-                <HeroNav />
-            </section>
-
-            {/* <section className="relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-center">
-                <p className="text-gray-700 text-lg leading-relaxed">
-                    Explore the show:{' '}
-                    <Link href={route('meet-bruce')} className="text-[#b59100] hover:text-[#ffde59] font-medium underline underline-offset-2 transition-colors">
-                        meet host Bruce W. Cole
-                    </Link>
-                    ,{' '}
-                    <Link href={route('guest-submissions')} className="text-[#b59100] hover:text-[#ffde59] font-medium underline underline-offset-2 transition-colors">
-                        suggest a guest
-                    </Link>
-                    , or{' '}
-                    <Link href={route('brand-partnerships')} className="text-[#b59100] hover:text-[#ffde59] font-medium underline underline-offset-2 transition-colors">
-                        learn about brand partnerships
-                    </Link>
-                    .
-                </p>
-            </section> */}
-
-            <RecentVideos episodes={videos} />
-            <FeaturedMerchSection products={featuredMerch} />
+                {products.length === 0 ? (
+                    <div className="py-24 text-center text-gray-500">
+                        No products available yet — check back soon.
+                    </div>
+                ) : (
+                    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                        {products.map((p, i) => (
+                            <ProductCard key={p.id} product={p} priority={i < 4} />
+                        ))}
+                    </div>
+                )}
+            </div>
         </HomeLayout>
     );
 }

@@ -25,6 +25,8 @@
     "dependencies": {
         "@icons-pack/react-simple-icons": "^13.8.0",
         "@lglab/react-qr-code": "^1.4.10",
+        "@stripe/react-stripe-js": "^6.3.0",
+        "@stripe/stripe-js": "^9.4.0",
         "framer-motion": "^12.31.0",
         "lucide-react": "^0.563.0",
         "react-hot-toast": "^2.6.0",
