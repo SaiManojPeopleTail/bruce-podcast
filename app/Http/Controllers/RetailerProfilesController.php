@@ -37,6 +37,44 @@ class RetailerProfilesController extends Controller
         ]);
     }
 
+    public function searchJson(Request $request): JsonResponse
+    {
+        $q = trim((string) $request->query('q', ''));
+
+        $results = RetailerProfile::query()
+            ->where('name', 'like', "%{$q}%")
+            ->with('phoneNumbers')
+            ->orderBy('name')
+            ->limit(8)
+            ->get()
+            ->map(fn ($r) => [
+                'id'      => $r->id,
+                'name'    => $r->name,
+                'actions' => $this->profileToActions($r),
+            ]);
+
+        return response()->json($results);
+    }
+
+    private function profileToActions(RetailerProfile $r): array
+    {
+        $actions = [];
+
+        if ($r->website) {
+            $actions[] = ['type' => 'link', 'label' => 'Website', 'value' => $r->website];
+        }
+
+        if ($r->email) {
+            $actions[] = ['type' => 'email', 'label' => 'Email', 'value' => $r->email];
+        }
+
+        foreach ($r->phoneNumbers as $p) {
+            $actions[] = ['type' => 'phone', 'label' => 'Phone', 'value' => $p->phone_number];
+        }
+
+        return $actions;
+    }
+
     public function create()
     {
         return Inertia::render('RetailerProfiles/Retailers/Create');

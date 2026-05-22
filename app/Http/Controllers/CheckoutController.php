@@ -17,6 +17,8 @@ class CheckoutController extends Controller
 {
     public function index()
     {
+        abort_if(! config('services.merch.purchase_enabled'), 404);
+
         return Inertia::render('Merch/Checkout', [
             'stripeKey' => config('services.stripe.key'),
         ]);
@@ -24,6 +26,7 @@ class CheckoutController extends Controller
 
     public function initiate(Request $request)
     {
+        abort_if(! config('services.merch.purchase_enabled'), 404);
         $data = $request->validate([
             'first_name' => ['required', 'string', 'max:100'],
             'last_name' => ['required', 'string', 'max:100'],

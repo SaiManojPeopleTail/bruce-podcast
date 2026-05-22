@@ -1,7 +1,8 @@
+import HeroNav from '@/Components/HeroNav';
 import MerchCartLineControls from '@/Components/MerchCartLineControls';
 import HomeLayout from '@/Layouts/HomeLayout';
-import { Head, Link } from '@inertiajs/react';
-import { ChevronLeft, ShoppingCart } from 'lucide-react';
+import { Head, Link, usePage } from '@inertiajs/react';
+import { ChevronLeft, Clock, ShoppingCart } from 'lucide-react';
 import { useState } from 'react';
 
 function formatPrice(cents) {
@@ -9,7 +10,7 @@ function formatPrice(cents) {
 }
 
 // Inner component — rendered inside CartProvider via HomeLayout
-function MerchShowContent({ product }) {
+function MerchShowContent({ product, purchaseEnabled }) {
     const firstAvailable = (product.variants ?? []).find((v) => v.is_available !== false);
     const [selectedVariantId, setSelectedVariantId] = useState(firstAvailable?.variant_id ?? null);
     const [activeImage, setActiveImage] = useState(0);
@@ -28,7 +29,7 @@ function MerchShowContent({ product }) {
         : null;
 
     return (
-        <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+        <div className="relative min-h-screen w-full max-w-7xl mx-auto flex flex-col px-4 sm:px-6 lg:px-8 py-10 md:py-16 mt-0 md:mt-8">
             <Link
                 href={route('merch.index')}
                 className="mb-6 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-[#b59100]"
@@ -137,16 +138,26 @@ function MerchShowContent({ product }) {
                     )}
 
                     {selectedVariant && (
-                        <MerchCartLineControls
-                            printifyProductId={product.printify_product_id}
-                            printifyVariantId={selectedVariant.variant_id}
-                            title={product.title}
-                            variantTitle={selectedVariant.title}
-                            image={images[0]?.src ?? images[0] ?? null}
-                            ourPrice={effectiveUnitPrice ?? 0}
-                            size="full"
-                            toastOnAdd
-                        />
+                        purchaseEnabled ? (
+                            <MerchCartLineControls
+                                printifyProductId={product.printify_product_id}
+                                printifyVariantId={selectedVariant.variant_id}
+                                title={product.title}
+                                variantTitle={selectedVariant.title}
+                                image={images[0]?.src ?? images[0] ?? null}
+                                ourPrice={effectiveUnitPrice ?? 0}
+                                size="full"
+                                toastOnAdd
+                            />
+                        ) : (
+                            <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4">
+                                <Clock className="h-5 w-5 shrink-0 text-amber-500" />
+                                <div>
+                                    <p className="text-sm font-semibold text-amber-800">Coming Soon</p>
+                                    <p className="text-xs text-amber-600 mt-0.5">Online purchasing will be available shortly. Check back soon!</p>
+                                </div>
+                            </div>
+                        )
                     )}
 
                     <p className="text-xs text-gray-400">
@@ -160,10 +171,13 @@ function MerchShowContent({ product }) {
 
 // Outer component — renders HomeLayout (which mounts CartProvider), then the content inside it
 export default function MerchShow({ product }) {
+    const { merch_purchase_enabled: purchaseEnabled } = usePage().props;
+
     return (
         <HomeLayout>
             <Head title={product.title} />
-            <MerchShowContent product={product} />
+            <MerchShowContent product={product} purchaseEnabled={purchaseEnabled} />
+            <HeroNav position="top" />
         </HomeLayout>
     );
 }

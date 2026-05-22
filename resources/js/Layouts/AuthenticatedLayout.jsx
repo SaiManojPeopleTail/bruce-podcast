@@ -53,6 +53,10 @@ export default function AuthenticatedLayout({ header, children }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const retailerNavActive = route().current('retailer-profiles.*');
     const [retailerNavOpen, setRetailerNavOpen] = useState(retailerNavActive);
+    const qrNavActive = route().current('product-qr-lists.*') || route().current('product-enquiries.*');
+    const [qrNavOpen, setQrNavOpen] = useState(qrNavActive);
+    const merchNavActive = route().current('merch-products.*') || route().current('merch-orders.*');
+    const [merchNavOpen, setMerchNavOpen] = useState(merchNavActive);
 
     useEffect(() => {
         if (retailerNavActive) {
@@ -183,22 +187,73 @@ export default function AuthenticatedLayout({ header, children }) {
                             )}
                         </div>
 
-                        <NavItem href={route('product-qr-lists.index')} active={route().current('product-qr-lists.*')}>
-                            <QrCode className="h-5 w-5 shrink-0" />
-                            Product QR lists
-                        </NavItem>
-                        <NavItem href={route('product-enquiries.index')} active={route().current('product-enquiries.*')}>
-                            <Inbox className="h-5 w-5 shrink-0" />
-                            Product Enquiries
-                        </NavItem>
-                        <NavItem href={route('merch-products.index')} active={route().current('merch-products.*')}>
-                            <ShoppingBag className="h-5 w-5 shrink-0" />
-                            Merch Products
-                        </NavItem>
-                        <NavItem href={route('merch-orders.index')} active={route().current('merch-orders.*')}>
-                            <ShoppingCart className="h-5 w-5 shrink-0" />
-                            Merch Orders
-                        </NavItem>
+                        {/* ── QR Company group ── */}
+                        <div className="pt-1">
+                            <button
+                                type="button"
+                                onClick={() => setQrNavOpen((o) => !o)}
+                                className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${
+                                    qrNavActive
+                                        ? 'bg-gray-200 text-gray-900 dark:bg-slate-700 dark:text-white'
+                                        : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white'
+                                }`}
+                            >
+                                <QrCode className="h-5 w-5 shrink-0" />
+                                <span className="min-w-0 flex-1">QR Company</span>
+                                <svg
+                                    className={`h-4 w-4 shrink-0 text-gray-500 transition-transform dark:text-slate-400 ${qrNavOpen ? 'rotate-180' : ''}`}
+                                    fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden
+                                >
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+                            {qrNavOpen && (
+                                <div className="mt-1 space-y-1 border-l border-gray-200 pl-3 dark:border-slate-600">
+                                    <NavItem href={route('product-qr-lists.index')} active={route().current('product-qr-lists.*')}>
+                                        <QrCode className="h-5 w-5 shrink-0" />
+                                        Companies
+                                    </NavItem>
+                                    <NavItem href={route('product-enquiries.index')} active={route().current('product-enquiries.*')}>
+                                        <Inbox className="h-5 w-5 shrink-0" />
+                                        Enquiries
+                                    </NavItem>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* ── Merch group ── */}
+                        <div className="pt-1">
+                            <button
+                                type="button"
+                                onClick={() => setMerchNavOpen((o) => !o)}
+                                className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${
+                                    merchNavActive
+                                        ? 'bg-gray-200 text-gray-900 dark:bg-slate-700 dark:text-white'
+                                        : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white'
+                                }`}
+                            >
+                                <ShoppingBag className="h-5 w-5 shrink-0" />
+                                <span className="min-w-0 flex-1">Merch</span>
+                                <svg
+                                    className={`h-4 w-4 shrink-0 text-gray-500 transition-transform dark:text-slate-400 ${merchNavOpen ? 'rotate-180' : ''}`}
+                                    fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden
+                                >
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+                            {merchNavOpen && (
+                                <div className="mt-1 space-y-1 border-l border-gray-200 pl-3 dark:border-slate-600">
+                                    <NavItem href={route('merch-products.index')} active={route().current('merch-products.*')}>
+                                        <ShoppingBag className="h-5 w-5 shrink-0" />
+                                        Products
+                                    </NavItem>
+                                    <NavItem href={route('merch-orders.index')} active={route().current('merch-orders.*')}>
+                                        <ShoppingCart className="h-5 w-5 shrink-0" />
+                                        Orders
+                                    </NavItem>
+                                </div>
+                            )}
+                        </div>
 
                         {user.id < 3 && (
                             <NavItem href={route('site-settings.index')} active={route().current('site-settings.*')}>

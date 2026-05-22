@@ -5,7 +5,7 @@ import RecentVideos from '@/Components/RecentVideos';
 import HomeLayout from '@/Layouts/HomeLayout';
 import { useCart } from '@/Context/CartContext';
 import { useReduceMotion } from '@/hooks/useReduceMotion';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { motion } from 'framer-motion';
 import { ShoppingBag } from 'lucide-react';
 import { useMemo } from 'react';
@@ -21,7 +21,7 @@ function effectiveUnitPrice(variant) {
 }
 
 /** Matches `Merch/Index` product cards for a consistent shop look */
-function FeaturedProductCard({ product, priority = false }) {
+function FeaturedProductCard({ product, priority = false, purchaseEnabled = true }) {
     const { items } = useCart();
     const image = product.images?.[0]?.src ?? product.images?.[0] ?? null;
     const defaultVariant = useMemo(
@@ -29,7 +29,7 @@ function FeaturedProductCard({ product, priority = false }) {
         [product.variants],
     );
     const unit = effectiveUnitPrice(defaultVariant);
-    const showCart = Boolean(defaultVariant && product.printify_product_id);
+    const showCart = purchaseEnabled && Boolean(defaultVariant && product.printify_product_id);
 
     const lineQty = useMemo(() => {
         if (!showCart || !defaultVariant) return 0;
@@ -100,6 +100,26 @@ function FeaturedProductCard({ product, priority = false }) {
                     </div>
                 )}
 
+                {!purchaseEnabled && (
+                    <div
+                        className={[
+                            'grid transition-[grid-template-rows] duration-300 ease-out',
+                            'grid-rows-[1fr]',
+                            'md:grid-rows-[0fr]',
+                            'md:group-hover:grid-rows-[1fr]',
+                        ].join(' ')}
+                    >
+                        <div className="min-h-0 overflow-hidden">
+                            <div className="pt-2">
+                                <span className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-semibold text-gray-400">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-gray-300" />
+                                    Coming Soon
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {showCart && (
                     <div
                         className={[
@@ -131,7 +151,7 @@ function FeaturedProductCard({ product, priority = false }) {
     );
 }
 
-function FeaturedMerchSection({ products }) {
+function FeaturedMerchSection({ products, purchaseEnabled = true }) {
     if (!products || products.length === 0) return null;
     const featured = products.slice(0, 4);
     return (
@@ -143,7 +163,7 @@ function FeaturedMerchSection({ products }) {
                 </div>
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                     {featured.map((p, i) => (
-                        <FeaturedProductCard key={p.id} product={p} priority={i < 4} />
+                        <FeaturedProductCard key={p.id} product={p} priority={i < 4} purchaseEnabled={purchaseEnabled} />
                     ))}
                 </div>
                 <div className="mt-10 text-center">
@@ -172,6 +192,7 @@ const heroTextVariants = {
 export default function Welcome({ videos = [], current_time_and_date = null, featuredMerch = [] }) {
     console.log(current_time_and_date);
 
+    const { merch_purchase_enabled: purchaseEnabled } = usePage().props;
     const reduceMotion = useReduceMotion();
     const H2 = reduceMotion ? 'h2' : motion.h2;
     const H1 = reduceMotion ? 'h1' : motion.h1;
@@ -218,7 +239,7 @@ export default function Welcome({ videos = [], current_time_and_date = null, fea
             </section> */}
 
             <RecentVideos episodes={videos} />
-            <FeaturedMerchSection products={featuredMerch} />
+            <FeaturedMerchSection products={featuredMerch} purchaseEnabled={purchaseEnabled} />
         </HomeLayout>
     );
 }

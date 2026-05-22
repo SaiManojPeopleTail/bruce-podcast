@@ -106,11 +106,11 @@ export default function Index({ products, filters }) {
         <AuthenticatedLayout
             header={
                 <h2 className="text-xl font-semibold leading-tight text-gray-800 dark:text-slate-200">
-                    Product QR Lists
+                    QR Companies
                 </h2>
             }
         >
-            <Head title="Product QR Lists" />
+            <Head title="QR Companies" />
 
             <div className="w-full py-6">
                 <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -130,7 +130,7 @@ export default function Index({ products, filters }) {
                         </button>
                     </form>
                     <Link href={route('product-qr-lists.create')}>
-                        <PrimaryButton>Add product QR</PrimaryButton>
+                        <PrimaryButton>Add QR Company</PrimaryButton>
                     </Link>
                 </div>
 
@@ -139,7 +139,7 @@ export default function Index({ products, filters }) {
                         <div className="p-12 text-center text-gray-500 dark:text-slate-400">
                             {filters?.search
                                 ? 'No products match your search.'
-                                : 'No product QR entries yet. Add your first one.'}
+                                : 'No QR companies yet. Add your first one.'}
                         </div>
                     ) : (
                         <div className="overflow-x-auto">
@@ -261,12 +261,13 @@ export default function Index({ products, filters }) {
                 {qrProduct && <QrModal product={qrProduct} onClose={() => setQrProduct(null)} />}
             </Modal>
 
+
             {/* Delete Modal */}
             <Modal show={!!deleteId} onClose={() => setDeleteId(null)} maxWidth="sm">
                 <div className="p-6">
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-slate-100">Delete product QR</h3>
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-slate-100">Delete QR Company</h3>
                     <p className="mt-2 text-sm text-gray-600 dark:text-slate-400">
-                        This permanently removes the product QR entry and deletes all associated product images and the product video from S3. This cannot be undone.
+                        This permanently removes the QR company entry and deletes all associated images and video from S3. This cannot be undone.
                     </p>
                     <div className="mt-6 flex justify-end gap-3">
                         <button

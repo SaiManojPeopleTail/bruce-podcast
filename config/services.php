@@ -58,11 +58,41 @@ return [
         'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
     ],
 
+    'elevenlabs' => [
+        'api_key'  => env('ELEVENLABS_API_KEY'),
+        'agent_id' => env('ELEVENLABS_AGENT_ID', env('VITE_ELEVENLABS_AGENT_ID')),
+    ],
+
+    'gemini' => [
+        'api_key' => env('GEMINI_API_KEY'),
+        'model'   => env('GEMINI_MODEL_NAME', 'gemini-2.5-flash-lite'),
+    ],
+
+    'openai' => [
+        'api_key' => env('OPENAI_API_KEY'),
+        'model' => env('OPENAI_MODEL'),
+        'web_search_tool' => env('OPENAI_WEB_SEARCH_TOOL', 'web_search'),
+    ],
+
+    'socialapis' => [
+        'api_token' => env('SOCIALAPIS_API_TOKEN'),
+    ],
+
+    'scraper_agent' => [
+        'url'                      => env('SCRAPER_AGENT_URL', 'http://127.0.0.1:7501'),
+        'secret'                   => env('SCRAPER_AGENT_SECRET', ''),
+        'max_posts'                => (int) env('SCRAPER_MAX_POSTS', 8),
+        'parallel_threshold'       => (int) env('SCRAPER_PARALLEL_THRESHOLD', 3),
+        'posts_per_worker'         => (int) env('SCRAPER_POSTS_PER_WORKER', 2),
+        'max_concurrent_sessions'  => (int) env('SCRAPER_MAX_CONCURRENT_SESSIONS', 8),
+    ],
+
     /*
     | Comma-separated admin emails for new merch order notifications (paid orders).
     | Example: MERCH_ORDERS_NOTIFY_EMAILS=ops@example.com,manager@example.com
     */
     'merch' => [
+        'purchase_enabled'     => env('MERCH_PURCHASE', true),
         'orders_notify_emails' => array_values(array_filter(array_map(
             'trim',
             explode(',', (string) env('MERCH_ORDERS_NOTIFY_EMAILS', '')),

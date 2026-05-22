@@ -137,6 +137,15 @@ iframe html body #player .ytp-chrome-top {
     border: none !important;
 }
 
+/* Force Instagram embeds to stay within their container on mobile */
+.instagram-media,
+iframe[src*="instagram.com"],
+iframe[src*="cdninstagram.com"] {
+    max-width: 100% !important;
+    min-width: unset !important;
+    width: 100% !important;
+}
+
 /* Hide scrollbar but keep scroll behavior */
 .scrollbar-hide {
     -ms-overflow-style: none;

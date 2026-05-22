@@ -1,0 +1,28 @@
+{
+  "name": "scraper-agent",
+  "version": "1.0.0",
+  "description": "Self-hosted Gemini vision agent that drives Chromium for social scraping",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "start": "node dist/server.js",
+    "dev": "ts-node --esm src/server.ts",
+    "install:browser": "playwright install --with-deps chromium"
+  },
+  "dependencies": {
+    "@google/genai": "^1.1.0",
+    "dotenv": "^16.4.7",
+    "express": "^4.19.2",
+    "playwright": "^1.50.1",
+    "uuid": "^11.1.0",
+    "ws": "^8.18.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.1",
+    "@types/node": "^22.13.10",
+    "@types/uuid": "^10.0.0",
+    "@types/ws": "^8.5.14",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.2"
+  }
+}

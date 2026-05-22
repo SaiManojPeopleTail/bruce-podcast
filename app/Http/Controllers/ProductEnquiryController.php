@@ -62,15 +62,29 @@ class ProductEnquiryController extends Controller
             ? ($this->temporaryUrlForStorageUrl($product->video_url) ?? $product->video_url)
             : null;
 
-        return Inertia::render('ProductEnquiry/Show', [
+        $design = config('features.product_enquiry_design', 'v1') === 'v2'
+            ? 'ProductEnquiry/ShowV2'
+            : 'ProductEnquiry/Show';
+
+        return Inertia::render($design, [
             'slug' => $slug,
             'product' => [
-                'id' => $product->id,
-                'slug' => $product->slug,
-                'product_name' => $product->product_name,
-                'product_description' => $product->product_description,
+                'id'                    => $product->id,
+                'slug'                  => $product->slug,
+                'product_name'          => $product->product_name,
+                'product_description'   => $product->product_description,
                 'signed_product_images' => $signedImages,
-                'signed_video_url' => $signedVideo,
+                'signed_video_url'      => $signedVideo,
+                'retailers'             => $product->retailers ?? [],
+                'elevenlabs_kb_id'      => $product->elevenlabs_kb_id,
+                'kb_rag_status'         => $product->kb_rag_status,
+                'kb_type'               => $product->kb_type,
+                'first_message'         => $product->first_message,
+                'voice_id'              => $product->voice_id,
+                'social_posts'          => array_values(array_filter(
+                    $product->social_posts ?? [],
+                    fn ($p) => (bool) ($p['active'] ?? true)
+                )),
             ],
         ]);
     }

@@ -186,6 +186,7 @@ class MerchProductController extends Controller
 
         Cache::forget('merch.index');
         Cache::forget('merch.featured');
+        Cache::forget('merch.featured.v2');
 
         return response()->json([
             'status' => 'synced',
@@ -308,6 +309,7 @@ class MerchProductController extends Controller
     {
         Cache::forget('merch.index');
         Cache::forget('merch.featured');
+        Cache::forget('merch.featured.v2');
         Cache::forget("merch.show.{$product->slug}");
         if ($oldSlug && $oldSlug !== $product->slug) {
             Cache::forget("merch.show.{$oldSlug}");

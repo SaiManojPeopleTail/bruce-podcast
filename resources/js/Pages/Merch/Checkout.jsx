@@ -1,3 +1,4 @@
+import HeroNav from '@/Components/HeroNav';
 import HomeLayout from '@/Layouts/HomeLayout';
 import { useCart } from '@/Context/CartContext';
 import { Head, Link } from '@inertiajs/react';
@@ -407,17 +408,20 @@ function CheckoutContent({ stripeKey }) {
 
     if (items.length === 0) {
         return (
-            <div className="flex flex-col items-center justify-center gap-4 py-32 text-center">
-                <p className="text-gray-500">Your cart is empty.</p>
-                <Link href={route('merch.index')} className="text-[#b59100] underline underline-offset-2">
-                    Go to shop
-                </Link>
+            <div className="relative min-h-screen w-full max-w-7xl mx-auto flex flex-col px-4 sm:px-6 lg:px-8 mt-0 md:mt-8">
+                <div className="flex flex-1 flex-col items-center justify-center gap-4 py-32 text-center">
+                    <p className="text-gray-500">Your cart is empty.</p>
+                    <Link href={route('merch.index')} className="text-[#b59100] underline underline-offset-2">
+                        Go to shop
+                    </Link>
+                </div>
             </div>
         );
     }
 
     return (
-        <div className="mx-auto w-full max-w-2xl px-4 py-12 sm:px-6">
+        <div className="relative min-h-screen w-full max-w-7xl mx-auto flex flex-col px-4 sm:px-6 lg:px-8 py-12 md:py-16 mt-0 md:mt-8">
+            <div className="mx-auto w-full max-w-2xl">
 
             <Link href={route('merch.index')} className="mb-8 inline-flex items-center gap-1 text-sm text-gray-400 transition hover:text-[#b59100]">
                 <ChevronLeft className="h-4 w-4" /> Back to shop
@@ -636,6 +640,7 @@ function CheckoutContent({ stripeKey }) {
                     </div>
                 </div>
             )}
+            </div>
         </div>
     );
 }
@@ -645,6 +650,7 @@ export default function Checkout({ stripeKey }) {
         <HomeLayout>
             <Head title="Checkout" />
             <CheckoutContent stripeKey={stripeKey} />
+            <HeroNav position="top" />
         </HomeLayout>
     );
 }

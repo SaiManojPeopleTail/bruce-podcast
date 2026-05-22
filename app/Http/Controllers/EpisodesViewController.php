@@ -364,6 +364,17 @@ class EpisodesViewController extends Controller
         return $this->renderClipPage($video, false);
     }
 
+    public function latestEpisode()
+    {
+        $episode = Episode::orderByDesc('created_at')->first();
+
+        if (! $episode) {
+            abort(404);
+        }
+
+        return redirect()->route('episode', ['slug' => $episode->slug]);
+    }
+
     public function episode(string $slug)
     {
         $episode = Episode::where('slug', $slug)->firstOrFail();

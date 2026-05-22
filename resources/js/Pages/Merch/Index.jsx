@@ -1,7 +1,8 @@
+import HeroNav from '@/Components/HeroNav';
 import MerchCartLineControls from '@/Components/MerchCartLineControls';
 import { useCart } from '@/Context/CartContext';
 import HomeLayout from '@/Layouts/HomeLayout';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { ShoppingBag } from 'lucide-react';
 import { useMemo } from 'react';
 
@@ -15,7 +16,7 @@ function effectiveUnitPrice(variant) {
     return variant.our_price;
 }
 
-function ProductCard({ product, priority = false }) {
+function ProductCard({ product, priority = false, purchaseEnabled = true }) {
     const { items } = useCart();
     const image = product.images?.[0]?.src ?? product.images?.[0] ?? null;
     const defaultVariant = useMemo(
@@ -23,7 +24,7 @@ function ProductCard({ product, priority = false }) {
         [product.variants],
     );
     const unit = effectiveUnitPrice(defaultVariant);
-    const showCart = Boolean(defaultVariant && product.printify_product_id);
+    const showCart = purchaseEnabled && Boolean(defaultVariant && product.printify_product_id);
 
     const lineQty = useMemo(() => {
         if (!showCart || !defaultVariant) return 0;
@@ -97,6 +98,26 @@ function ProductCard({ product, priority = false }) {
                     </div>
                 )}
 
+                {!purchaseEnabled && (
+                    <div
+                        className={[
+                            'grid transition-[grid-template-rows] duration-300 ease-out',
+                            'grid-rows-[1fr]',
+                            'md:grid-rows-[0fr]',
+                            'md:group-hover:grid-rows-[1fr]',
+                        ].join(' ')}
+                    >
+                        <div className="min-h-0 overflow-hidden">
+                            <div className="pt-2">
+                                <span className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-semibold text-gray-400">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-gray-300" />
+                                    Coming Soon
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {showCart && (
                     <div
                         className={[
@@ -129,14 +150,22 @@ function ProductCard({ product, priority = false }) {
 }
 
 export default function MerchIndex({ products = [] }) {
+    const { merch_purchase_enabled: purchaseEnabled } = usePage().props;
+
     return (
         <HomeLayout>
             <Head title="Shop" />
 
-            <div className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+            <div className="relative min-h-screen w-full max-w-7xl mx-auto flex flex-col px-4 sm:px-6 lg:px-8 py-16 md:py-20 mt-0 md:mt-8">
                 <div className="mb-10 text-center">
                     <p className="text-sm font-semibold uppercase tracking-widest text-[#b59100]">Official Merch</p>
                     <h1 className="mt-2 text-4xl font-bold text-gray-900">Shop</h1>
+                    {!purchaseEnabled && (
+                        <p className="mt-3 inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-4 py-1.5 text-sm font-medium text-amber-700">
+                            <span className="h-2 w-2 rounded-full bg-amber-400" />
+                            Online purchasing coming soon — stay tuned!
+                        </p>
+                    )}
                 </div>
 
                 {products.length === 0 ? (
@@ -146,11 +175,12 @@ export default function MerchIndex({ products = [] }) {
                 ) : (
                     <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         {products.map((p, i) => (
-                            <ProductCard key={p.id} product={p} priority={i < 4} />
+                            <ProductCard key={p.id} product={p} priority={i < 4} purchaseEnabled={purchaseEnabled} />
                         ))}
                     </div>
                 )}
             </div>
+            <HeroNav position="top" />
         </HomeLayout>
     );
 }

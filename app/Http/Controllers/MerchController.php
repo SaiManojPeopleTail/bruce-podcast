@@ -14,6 +14,7 @@ class MerchController extends Controller
     {
         Cache::forget('merch.index');
         Cache::forget('merch.featured');
+        Cache::forget('merch.featured.v2');
         if ($slug) {
             Cache::forget("merch.show.{$slug}");
         } else {

@@ -15,13 +15,21 @@ class ProductQrList extends Model
         'product_description',
         'video_url',
         'generated_qr_code_base64',
+        'retailers',
+        'first_message',
+        'voice_id',
+        'social_posts',
+        'elevenlabs_kb_id',
+        'kb_rag_status',
+        'kb_name',
+        'kb_type',
     ];
-
-    // product images will be an array of strings should be converted to json and stored in the database
 
     protected $casts = [
         'product_images' => 'array',
         'generated_qr_code_base64' => 'string',
+        'retailers' => 'array',
+        'social_posts' => 'array',
     ];
 
     public function enquiries(): HasMany

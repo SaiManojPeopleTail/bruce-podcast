@@ -38,6 +38,7 @@ class HandleInertiaRequests extends Middleware
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
             ],
+            'merch_purchase_enabled' => (bool) config('services.merch.purchase_enabled'),
         ];
     }
 }

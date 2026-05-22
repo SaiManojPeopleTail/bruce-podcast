@@ -92,7 +92,7 @@ class WelcomeController extends Controller
 
         $paginator = Episode::orderByDesc('created_at')->paginate(self::VIDEOS_PER_PAGE);
 
-        $featuredMerch = Cache::remember('merch.featured', now()->addMinutes(30), function () {
+        $featuredMerch = Cache::remember('merch.featured.v2', now()->addMinutes(30), function () {
             return MerchProduct::where('is_visible', true)
                 ->inRandomOrder()
                 ->limit(4)
@@ -102,6 +102,8 @@ class WelcomeController extends Controller
                     'slug' => $p->slug,
                     'title' => $p->title,
                     'images' => $p->images,
+                    'printify_product_id' => $p->printify_product_id,
+                    'variants' => $p->variants ?? [],
                     'starting_price' => $p->startingPrice(),
                     'has_sale' => $p->hasSale(),
                 ]);

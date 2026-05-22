@@ -1,3 +1,4 @@
+import HeroNav from '@/Components/HeroNav';
 import HomeLayout from '@/Layouts/HomeLayout';
 import { Head, useForm } from '@inertiajs/react';
 import { ExternalLink, Loader2, Package, Truck } from 'lucide-react';
@@ -69,7 +70,8 @@ export default function Track({ order }) {
         <HomeLayout>
             <Head title="Track your order" />
 
-            <div className="mx-auto w-full max-w-2xl px-4 py-16 sm:px-6">
+            <div className="relative min-h-screen w-full max-w-7xl mx-auto flex flex-col px-4 sm:px-6 lg:px-8 py-16 md:py-20 mt-0 md:mt-8">
+                <div className="mx-auto w-full max-w-2xl">
                 <div className="mb-10 text-center">
                     <p className="text-sm font-semibold uppercase tracking-widest text-[#b59100]">Order tracking</p>
                     <h1 className="mt-2 text-3xl font-bold text-gray-900">Track your order</h1>
@@ -190,7 +192,9 @@ export default function Track({ order }) {
                         </div>
                     </div>
                 )}
+                </div>
             </div>
+            <HeroNav position="top" />
         </HomeLayout>
     );
 }

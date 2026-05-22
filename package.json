@@ -23,6 +23,8 @@
         "vite": "^7.0.7"
     },
     "dependencies": {
+        "@11labs/react": "^0.2.0",
+        "@elevenlabs/client": "^1.7.0",
         "@icons-pack/react-simple-icons": "^13.8.0",
         "@lglab/react-qr-code": "^1.4.10",
         "@stripe/react-stripe-js": "^6.3.0",
@@ -30,8 +32,10 @@
         "framer-motion": "^12.31.0",
         "lucide-react": "^0.563.0",
         "react-hot-toast": "^2.6.0",
+        "react-markdown": "^10.1.0",
         "react-quill": "^2.0.0",
         "react-tooltip": "^5.30.0",
+        "remark-gfm": "^4.0.1",
         "tus-js-client": "^4.2.0"
     }
 }

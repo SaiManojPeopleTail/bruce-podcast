@@ -27,6 +27,12 @@ export default function Footer() {
                         Episodes
                     </Link>
                     <Link
+                        href={route('merch.index')}
+                        className="text-sm font-medium text-gray-300 hover:text-[#ffde59] transition-colors"
+                    >
+                        Merchandise
+                    </Link>
+                    <Link
                         href={route('meet-bruce')}
                         className="text-sm font-medium text-gray-300 hover:text-[#ffde59] transition-colors"
                     >

@@ -1,12 +1,15 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
+import ProductContentExtractorModal from '@/Components/Admin/ProductContentExtractorModal';
+import RetailersEditor, { resolveRetailerConflicts } from '@/Components/Admin/RetailersEditor';
+import SocialPostsManager from '@/Components/Admin/SocialPostsManager';
 import PrimaryButton from '@/Components/PrimaryButton';
 import RichTextEditor from '@/Components/RichTextEditor';
 import { Head, router } from '@inertiajs/react';
 import { ReactQRCode } from '@lglab/react-qr-code';
 import axios from 'axios';
-import { CheckCircle, Film, ImagePlus, Loader2, Video, X, XCircle } from 'lucide-react';
+import { BookOpen, CheckCircle, CheckCircle2, Film, ImagePlus, Loader2, Video, X, XCircle } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 
@@ -62,6 +65,13 @@ export default function Create() {
     const [slug, setSlug] = useState('');
     const [slugStatus, setSlugStatus] = useState('idle'); // idle | checking | available | taken | empty
     const [description, setDescription] = useState('');
+    const [retailers, setRetailers] = useState([]);
+    const [pendingConflict, setPendingConflict] = useState(null);
+    const [socialPosts, setSocialPosts] = useState([]);
+    const [pendingKbText, setPendingKbText] = useState('');
+    const [pendingKbName, setPendingKbName] = useState('');
+    const [firstMessage, setFirstMessage] = useState('');
+    const [voiceId, setVoiceId] = useState('');
     // Gallery media: parallel arrays of File and {url, type}
     const [mediaFiles, setMediaFiles] = useState([]); // File[]
     const [mediaPreviews, setMediaPreviews] = useState([]); // {url: string, type: 'image'|'video'}[]
@@ -73,6 +83,7 @@ export default function Create() {
     const [processing, setProcessing] = useState(false);
     const [draggingMedia, setDraggingMedia] = useState(false);
     const [draggingVideo, setDraggingVideo] = useState(false);
+    const [showAutoModal, setShowAutoModal] = useState(false);
 
     // Revoke object URLs on unmount
     useEffect(() => () => { mediaObjectUrlsRef.current.forEach(URL.revokeObjectURL); }, []);
@@ -175,7 +186,7 @@ export default function Create() {
         if (processing) return;
 
         if (!productName.trim()) {
-            setErrors({ product_name: 'Product name is required.' });
+            setErrors({ product_name: 'Name is required.' });
             return;
         }
         if (!slug || slugStatus === 'checking') {
@@ -185,6 +196,14 @@ export default function Create() {
 
         setProcessing(true);
         setErrors({});
+
+        let resolvedRetailers;
+        try {
+            resolvedRetailers = await resolveRetailerConflicts(retailers, setPendingConflict);
+        } catch {
+            setProcessing(false);
+            return;
+        }
 
         let qrBase64 = null;
         try {
@@ -200,7 +219,19 @@ export default function Create() {
         fd.append('slug', slug);
         fd.append('notification_email', notificationEmail.trim());
         fd.append('product_description', description || '');
+        fd.append('first_message', firstMessage.trim());
+        fd.append('voice_id', voiceId.trim());
+        if (pendingKbText.trim()) {
+            fd.append('kb_text', pendingKbText.trim());
+            fd.append('kb_name', pendingKbName.trim() || `${productName.trim()} — Knowledge Base`);
+        }
+        if (socialPosts.length > 0) {
+            fd.append('social_posts', JSON.stringify(socialPosts));
+        }
         if (qrBase64) fd.append('generated_qr_code_base64', qrBase64);
+        if (resolvedRetailers.length > 0) {
+            fd.append('retailers', JSON.stringify(resolvedRetailers));
+        }
         mediaFiles.forEach((file, i) => fd.append(`images[${i}]`, file));
         if (video) fd.append('video', video);
 
@@ -229,21 +260,44 @@ export default function Create() {
         <AuthenticatedLayout
             header={
                 <h2 className="text-xl font-semibold leading-tight text-gray-800 dark:text-slate-200">
-                    Add product QR
+                    Add QR Company
                 </h2>
             }
         >
-            <Head title="Add Product QR" />
+            <Head title="Add QR Company" />
 
-            <div className="mx-auto w-full max-w-4xl">
-                <form onSubmit={handleSubmit}>
+            <div className="w-full pb-24">
+                <form id="create-qr-form" onSubmit={handleSubmit}>
+                    <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,13fr)_minmax(0,7fr)]">
+
+                    {/* ── Left column ── */}
                     <div className="space-y-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-slate-600 dark:bg-slate-800 md:p-8">
+                        {/* AI banner */}
+                        <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-4 dark:border-amber-900/40 dark:bg-amber-900/20">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+                                        Generate from product URL
+                                    </h3>
+                                    <p className="mt-1 text-xs text-amber-800/80 dark:text-amber-200/80">
+                                        Opens a GPT web-search modal. Nothing is saved until you submit this form.
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowAutoModal(true)}
+                                    className="shrink-0 rounded-lg bg-[#b59100] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#9a7c00]"
+                                >
+                                    Automatic
+                                </button>
+                            </div>
+                        </div>
 
                         {/* ── Top row: Name + Slug | inline QR ── */}
                         <div className="grid grid-cols-[1fr_auto] items-start gap-5">
                             <div className="space-y-5">
                                 <div>
-                                    <InputLabel htmlFor="product_name" value="Product Name *" />
+                                    <InputLabel htmlFor="product_name" value="Name *" />
                                     <input
                                         id="product_name"
                                         type="text"
@@ -280,7 +334,7 @@ export default function Create() {
                                 </div>
                             </div>
 
-                            {/* Inline QR — no inner card, just the code itself */}
+                            {/* Inline QR */}
                             <div className="flex flex-col items-center gap-1 pt-6">
                                 {qrUrl ? (
                                     <>
@@ -309,16 +363,21 @@ export default function Create() {
 
                         {/* Description */}
                         <div>
-                            <InputLabel value="Product Description" />
+                            <InputLabel value="Description" />
                             <div className="mt-1">
                                 <RichTextEditor
                                     value={description}
                                     onChange={setDescription}
-                                    placeholder="Describe the product — ingredients, benefits, retailer notes…"
+                                    placeholder="Describe the company and its products — mission, product range, key benefits…"
                                 />
                             </div>
                             <InputError message={errors.product_description} className="mt-1" />
                         </div>
+
+                        {/* Social posts (populated from AI modal) */}
+                        {socialPosts.length > 0 && (
+                            <SocialPostsManager posts={socialPosts} onChange={setSocialPosts} />
+                        )}
 
                         <div>
                             <InputLabel htmlFor="notification_email" value="Notification email (optional)" />
@@ -334,7 +393,7 @@ export default function Create() {
                             <InputError message={errors.notification_email} className="mt-1" />
                         </div>
 
-                        {/* Product Media (images + videos) */}
+                        {/* Product Media */}
                         <div>
                             <div className="mb-2 flex items-center justify-between">
                                 <InputLabel value={`Product Media (up to ${MAX_MEDIA})`} />
@@ -451,22 +510,158 @@ export default function Create() {
                             </label>
                             <InputError message={errors.video} className="mt-1" />
                         </div>
+                    </div>{/* end left column */}
 
-                        <div className="flex justify-end pt-2">
-                            <PrimaryButton disabled={processing || slugStatus === 'checking'}>
-                                {processing ? (
-                                    <span className="flex items-center gap-2">
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                        Saving…
-                                    </span>
-                                ) : (
-                                    'Save product QR'
-                                )}
-                            </PrimaryButton>
+                    {/* ── Right column ── */}
+                    <div className="space-y-6 lg:sticky lg:top-6">
+
+                        {/* Retailers */}
+                        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-slate-600 dark:bg-slate-800">
+                            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-slate-400">
+                                Retailers
+                            </h3>
+                            <RetailersEditor
+                                retailers={retailers}
+                                onChange={setRetailers}
+                                pendingConflict={pendingConflict}
+                                setPendingConflict={setPendingConflict}
+                            />
                         </div>
-                    </div>
+
+                        {/* Agent overrides */}
+                        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-slate-600 dark:bg-slate-800">
+                            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-slate-400">
+                                Agent overrides
+                            </h3>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="text-sm font-medium text-gray-700 dark:text-slate-200">
+                                        First message
+                                    </label>
+                                    <textarea
+                                        value={firstMessage}
+                                        onChange={(e) => setFirstMessage(e.target.value)}
+                                        rows={3}
+                                        maxLength={1000}
+                                        placeholder="Override the agent's opening message for this product…"
+                                        className="mt-1 block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-slate-500 dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-400"
+                                    />
+                                    <InputError message={errors.first_message} className="mt-1" />
+                                </div>
+                                <div>
+                                    <label className="text-sm font-medium text-gray-700 dark:text-slate-200">
+                                        Voice ID
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={voiceId}
+                                        onChange={(e) => setVoiceId(e.target.value)}
+                                        placeholder="ElevenLabs voice ID override"
+                                        className="mt-1 block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-slate-500 dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-400"
+                                    />
+                                    <InputError message={errors.voice_id} className="mt-1" />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* KB card — shows generated content or empty prompt */}
+                        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-slate-600 dark:bg-slate-800">
+                            <div className="mb-3 flex items-center gap-2">
+                                <BookOpen className="h-4 w-4 text-indigo-400" />
+                                <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-slate-400">
+                                    Agent Knowledge Base
+                                </h3>
+                            </div>
+
+                            {pendingKbText ? (
+                                <div className="space-y-3">
+                                    <div className="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 dark:border-emerald-900/40 dark:bg-emerald-900/20">
+                                        <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                                        <p className="text-xs text-emerald-700 dark:text-emerald-300">
+                                            KB content ready — will be uploaded to ElevenLabs automatically when you save.
+                                        </p>
+                                    </div>
+                                    {pendingKbName && (
+                                        <p className="font-mono text-[10px] text-gray-400 dark:text-slate-500">
+                                            {pendingKbName}
+                                        </p>
+                                    )}
+                                    <textarea
+                                        readOnly
+                                        value={pendingKbText}
+                                        rows={5}
+                                        className="block w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => { setPendingKbText(''); setPendingKbName(''); }}
+                                        className="text-xs text-gray-400 hover:text-red-500 dark:hover:text-red-400"
+                                    >
+                                        Remove KB content
+                                    </button>
+                                </div>
+                            ) : (
+                                <p className="text-xs text-gray-400 dark:text-slate-500">
+                                    Use <strong className="text-amber-700 dark:text-amber-400">Automatic</strong> above to generate KB content. It will be uploaded to ElevenLabs when you save the product.
+                                </p>
+                            )}
+                        </div>
+
+                    </div>{/* end right column */}
+
+                    </div>{/* end grid */}
                 </form>
             </div>
+
+            {/* Sticky bottom action bar */}
+            <div className="fixed inset-x-0 bottom-0 z-30 border-t border-gray-200 bg-white/90 backdrop-blur dark:border-slate-700 dark:bg-slate-900/90">
+                <div className="flex w-full items-center justify-end gap-3 px-4 py-3 lg:px-8">
+                    <PrimaryButton
+                        form="create-qr-form"
+                        type="submit"
+                        disabled={processing || slugStatus === 'checking'}
+                    >
+                        {processing ? (
+                            <span className="flex items-center gap-2">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Saving…
+                            </span>
+                        ) : (
+                            'Save QR Company'
+                        )}
+                    </PrimaryButton>
+                </div>
+            </div>
+
+            <ProductContentExtractorModal
+                show={showAutoModal}
+                onClose={() => setShowAutoModal(false)}
+                onApply={(result) => {
+                    if (result?.name?.product_name) {
+                        const name = result.name.product_name;
+                        setProductName(name);
+                        const raw = toSlug(name);
+                        setSlug(raw);
+                        if (raw) { setSlugStatus('checking'); checkSlug(raw); }
+                    }
+                    if (result?.product_description) setDescription(result.product_description);
+                    if (result?.social_links?.length) {
+                        setSocialPosts(result.social_links.map((p) => ({ ...p, active: true })));
+                    }
+                    if (result?.about_company || result?.about_product) {
+                        const parts = [
+                            result.about_company ? `ABOUT THE COMPANY\n${result.about_company}` : '',
+                            result.about_product ? `ABOUT THE PRODUCT\n${result.about_product}` : '',
+                        ].filter(Boolean);
+                        setPendingKbText(parts.join('\n\n'));
+                        const slugPart = (s) => String(s ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+                        const now = new Date();
+                        const date = now.toISOString().slice(0, 10);
+                        const time = now.toTimeString().slice(0, 5).replace(':', '-');
+                        setPendingKbName(`${slugPart(result.name?.company_name)}-${slugPart(result.name?.product_name)}-KB-${date}-${time}`);
+                    }
+                }}
+            />
         </AuthenticatedLayout>
     );
 }

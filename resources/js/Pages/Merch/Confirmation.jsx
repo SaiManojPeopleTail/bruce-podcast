@@ -1,3 +1,4 @@
+import HeroNav from '@/Components/HeroNav';
 import HomeLayout from '@/Layouts/HomeLayout';
 import { Head, Link } from '@inertiajs/react';
 import { CheckCircle2, Package } from 'lucide-react';
@@ -20,7 +21,8 @@ export default function Confirmation({ order }) {
         <HomeLayout>
             <Head title="Order confirmed" />
 
-            <div className="mx-auto w-full max-w-2xl px-4 py-16 sm:px-6">
+            <div className="relative min-h-screen w-full max-w-7xl mx-auto flex flex-col px-4 sm:px-6 lg:px-8 py-16 md:py-20 mt-0 md:mt-8">
+                <div className="mx-auto w-full max-w-2xl">
                 <div className="mb-8 flex flex-col items-center gap-3 text-center">
                     <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
                         <CheckCircle2 className="h-8 w-8 text-emerald-600" />
@@ -93,7 +95,9 @@ export default function Confirmation({ order }) {
                         Continue shopping
                     </Link>
                 </div>
+                </div>
             </div>
+            <HeroNav position="top" />
         </HomeLayout>
     );
 }

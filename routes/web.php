@@ -13,6 +13,7 @@ use App\Http\Controllers\NewsletterController;
 use App\Http\Controllers\PersonalityController;
 use App\Http\Controllers\ProductEnquiryController;
 use App\Http\Controllers\ProductEnquirySubmissionController;
+use App\Http\Controllers\ProductContentExtractorController;
 use App\Http\Controllers\ProductQrListController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RetailerDepartmentController;
@@ -55,6 +56,14 @@ Route::prefix('checkout')->name('checkout.')->group(function () {
     Route::get('/confirmation/{token}', [CheckoutController::class, 'confirmation'])->name('confirmation');
 });
 
+Route::get('/api/ai-concierge/signed-url', [\App\Http\Controllers\AiConciergeController::class, 'signedUrl'])
+    ->name('ai-concierge.signed-url');
+
+Route::post('/api/ai-concierge/enquiry/{slug}', [\App\Http\Controllers\AiConciergeController::class, 'submitEnquiry'])
+    ->middleware('throttle:10,1')
+    ->name('ai-concierge.submit-enquiry')
+    ->where('slug', '[a-z0-9]+(?:-[a-z0-9]+)*');
+
 Route::get('/', [WelcomeController::class, 'index'])->name('welcome');
 Route::get('/api/videos/more', [WelcomeController::class, 'videosMore'])->name('api.videos.more');
 Route::get('/meet-bruce', [WelcomeController::class, 'meetBruce'])->name('meet-bruce');
@@ -62,6 +71,35 @@ Route::redirect('/about', '/meet-bruce', 301);
 Route::get('/brand-partnerships', [WelcomeController::class, 'brandPartnerships'])->name('brand-partnerships');
 Route::get('/guest-submissions', [WelcomeController::class, 'guestSubmission'])->name('guest-submissions');
 Route::redirect('/guest-submission', '/guest-submissions', 301);
+Route::get('/latest-episode', [EpisodesViewController::class, 'latestEpisode'])->name('latest-episode');
+Route::get('/proxy/image', function (\Illuminate\Http\Request $request) {
+    $url = $request->query('url');
+    if (! $url || ! filter_var($url, FILTER_VALIDATE_URL)) {
+        abort(400);
+    }
+    // Only proxy known social CDN hosts
+    $host = parse_url($url, PHP_URL_HOST) ?? '';
+    $allowed = ['cdninstagram.com', 'instagram.com', 'fbcdn.net', 'scontent', 'media.licdn.com', 'linkedin.com'];
+    $isAllowed = collect($allowed)->contains(fn($h) => str_contains($host, $h));
+    if (! $isAllowed) {
+        abort(403);
+    }
+    try {
+        $response = \Illuminate\Support\Facades\Http::timeout(10)
+            ->withHeaders(['User-Agent' => 'Mozilla/5.0 (compatible; bot/1.0)'])
+            ->get($url);
+        if (! $response->successful()) {
+            abort(502);
+        }
+        $contentType = $response->header('Content-Type') ?? 'image/jpeg';
+        return response($response->body(), 200, [
+            'Content-Type'  => $contentType,
+            'Cache-Control' => 'public, max-age=86400',
+        ]);
+    } catch (\Throwable $e) {
+        abort(502);
+    }
+})->name('proxy.image');
 Route::get('/episode/{slug}', [EpisodesViewController::class, 'episode'])->name('episode');
 Route::get('/all-episodes', [EpisodesViewController::class, 'allIndex'])->name('all-episodes-list');
 Route::get('/episodes', [EpisodesViewController::class, 'index'])->name('episodes-list');
@@ -155,6 +193,7 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () {
     Route::patch('/users/{user}/password', [UserController::class, 'updatePassword'])->name('users.update-password');
 
     Route::prefix('retailer-profiles')->name('retailer-profiles.')->group(function () {
+        Route::get('/retailers/search', [RetailerProfilesController::class, 'searchJson'])->name('retailers.search');
         Route::get('/retailers', [RetailerProfilesController::class, 'retailers'])->name('retailers.index');
         Route::post('/retailers/bulk-import', [RetailerProfilesController::class, 'bulkImport'])->name('retailers.bulk-import');
         Route::get('/retailers/create', [RetailerProfilesController::class, 'create'])->name('retailers.create');
@@ -200,13 +239,58 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () {
     Route::post('/product-enquiries/{productEnquiry}/resend-notification', [ProductEnquirySubmissionController::class, 'resendNotification'])->name('product-enquiries.resend-notification');
     Route::delete('/product-enquiries/{productEnquiry}', [ProductEnquirySubmissionController::class, 'destroy'])->name('product-enquiries.destroy');
 
+    // Product QR knowledge base management (admin)
+    Route::get('/product-qr/knowledge-base/list', [\App\Http\Controllers\AiConciergeController::class, 'kbList'])
+        ->name('ai-concierge.kb.list');
+    Route::post('/product-qr/{slug}/knowledge-base', [\App\Http\Controllers\AiConciergeController::class, 'uploadKb'])
+        ->name('ai-concierge.kb.upload')
+        ->where('slug', '[a-z0-9]+(?:-[a-z0-9]+)*');
+    Route::post('/product-qr/{slug}/knowledge-base/rag-status', [\App\Http\Controllers\AiConciergeController::class, 'kbRagStatus'])
+        ->name('ai-concierge.kb.rag-status')
+        ->where('slug', '[a-z0-9]+(?:-[a-z0-9]+)*');
+    Route::post('/product-qr/{slug}/knowledge-base/assign', [\App\Http\Controllers\AiConciergeController::class, 'assignKb'])
+        ->name('ai-concierge.kb.assign')
+        ->where('slug', '[a-z0-9]+(?:-[a-z0-9]+)*');
+    Route::delete('/product-qr/{slug}/knowledge-base', [\App\Http\Controllers\AiConciergeController::class, 'unlinkKb'])
+        ->name('ai-concierge.kb.unlink')
+        ->where('slug', '[a-z0-9]+(?:-[a-z0-9]+)*');
+    Route::delete('/product-qr/knowledge-base/{kbId}/purge', [\App\Http\Controllers\AiConciergeController::class, 'purgeKb'])
+        ->name('ai-concierge.kb.purge');
+
     Route::get('/product-qr-lists', [ProductQrListController::class, 'index'])->name('product-qr-lists.index');
     Route::get('/product-qr-lists/create', [ProductQrListController::class, 'create'])->name('product-qr-lists.create');
     Route::get('/product-qr-lists/check-slug', [ProductQrListController::class, 'checkSlug'])->name('product-qr-lists.check-slug');
+    Route::post('/product-qr-lists/extract-content', [ProductContentExtractorController::class, 'extract'])->name('product-qr-lists.extract-content');
     Route::post('/product-qr-lists', [ProductQrListController::class, 'store'])->name('product-qr-lists.store');
     Route::get('/product-qr-lists/{productQrList}/edit', [ProductQrListController::class, 'edit'])->name('product-qr-lists.edit');
     Route::patch('/product-qr-lists/{productQrList}', [ProductQrListController::class, 'update'])->name('product-qr-lists.update');
     Route::delete('/product-qr-lists/{productQrList}', [ProductQrListController::class, 'destroy'])->name('product-qr-lists.destroy');
+
+    // Social scraper — dedicated page
+    Route::get('/social-scraper', [\App\Http\Controllers\SocialScraperController::class, 'page'])
+        ->name('social-scraper.page');
+
+    // Social scraper — Lite mode (Gemini url_context, SSE)
+    Route::post('/social-scrape', [\App\Http\Controllers\SocialScraperController::class, 'scrape'])
+        ->name('social-scrape.run');
+
+    // Social scraper — Agent mode (Chromium + Gemini vision, WebSocket)
+    Route::post('/social-scrape/agent', [\App\Http\Controllers\SocialScraperController::class, 'agent'])
+        ->name('social-scrape.agent');
+    Route::post('/social-scrape/agent/cancel', [\App\Http\Controllers\SocialScraperController::class, 'cancelAgent'])
+        ->name('social-scrape.agent.cancel');
+
+    // One-shot signed URL used by the sidecar to fetch plaintext credentials
+    Route::get('/social-scrape/credentials/{credentialId}', [\App\Http\Controllers\SocialScraperController::class, 'credentials'])
+        ->name('social-scrape.credentials')
+        ->where('credentialId', '[0-9]+');
+
+    Route::get('/social-scrape/saved', [\App\Http\Controllers\SocialScraperController::class, 'saved'])
+        ->name('social-scrape.saved');
+    Route::post('/social-scrape/save', [\App\Http\Controllers\SocialScraperController::class, 'save'])
+        ->name('social-scrape.save');
+    Route::patch('/social-scrape/posts/{socialScrapePost}', [\App\Http\Controllers\SocialScraperController::class, 'togglePost'])
+        ->name('social-scrape.posts.toggle');
 
     // Merch products (admin)
     Route::get('/merch-products', [MerchProductController::class, 'index'])->name('merch-products.index');

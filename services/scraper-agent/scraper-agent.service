@@ -1,0 +1,38 @@
+[Unit]
+Description=Social Scraper Agent (Gemini + Playwright)
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/var/www/the-pod/services/scraper-agent
+
+# Load env from a file outside the repo so secrets are not committed
+EnvironmentFile=/var/www/the-pod/services/scraper-agent/.env
+
+# xvfb-run spawns a virtual X display so Chromium can render headlessly
+# Adjust --server-args resolution to match HEADLESS=false dev windows if needed
+ExecStart=/usr/bin/xvfb-run \
+    --auto-servernum \
+    --server-args="-screen 0 1280x800x24 -ac" \
+    /usr/bin/node /var/www/the-pod/services/scraper-agent/dist/server.js
+
+# Restart if it crashes (not on clean exit or SIGTERM)
+Restart=on-failure
+RestartSec=5
+
+# Resource limits — each Chromium session needs ~1 GB RAM
+MemoryMax=4G
+TasksMax=512
+
+# Prevent stray Chromium orphans from lingering after service stop
+KillMode=control-group
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=scraper-agent
+
+[Install]
+WantedBy=multi-user.target
