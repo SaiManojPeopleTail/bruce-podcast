@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-const VIDEO_THUMB_TIME = 4;
+const VIDEO_THUMB_TIME = 1;
 
 /* ── Utilities ───────────────────────────────────────────────────────────── */
 
