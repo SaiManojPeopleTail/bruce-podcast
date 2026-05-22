@@ -353,7 +353,7 @@ function SocialPostsGallery({ posts }) {
             <div className="flex items-center justify-between px-5 pt-5 pb-3">
                 <div className="flex items-center gap-2">
                     <Share2 className="h-4 w-4 text-[#b59100]" />
-                    <h3 className="barlow-condensed-semibold text-2xl font-bold leading-tight text-gray-900">Our Socials</h3>
+                    <h3 className="barlow-condensed-semibold text-2xl font-bold leading-tight text-gray-900">Social Media</h3>
                 </div>
                 {total > 1 && <span className="text-xs text-gray-400">{active + 1} / {total}</span>}
             </div>
