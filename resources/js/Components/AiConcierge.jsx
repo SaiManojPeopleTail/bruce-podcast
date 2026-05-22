@@ -1,6 +1,6 @@
 import { useConversation } from '@11labs/react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { CheckCircle, ChevronLeft, ClipboardList, MessageSquare, Mic, Phone, PhoneOff, Send, Sparkles, X } from 'lucide-react';
+import { CheckCircle, ChevronLeft, ClipboardList, MessageSquare, Mic, MicOff, Phone, PhoneOff, Send, Sparkles, X } from 'lucide-react';
 import { forwardRef, useCallback, useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -480,6 +480,8 @@ export default function AiConcierge({ product, autoStart = null, initialUserMess
     const messagesContainerRef = useRef(null);
     const inputRef = useRef(null);
 
+    const [micMuted, setMicMuted] = useState(false);
+
     // Form overlay state
     const [formVisible, setFormVisible]     = useState(false);
     const [formData, setFormData]           = useState(EMPTY_FORM);
@@ -570,6 +572,7 @@ export default function AiConcierge({ product, autoStart = null, initialUserMess
     }, []);
 
     const { status, isSpeaking, startSession, endSession, sendUserMessage } = useConversation({
+        micMuted,
         onMessage,
         onConnect: () => console.log('[AiConcierge] connected'),
         onDebug,
@@ -770,6 +773,7 @@ export default function AiConcierge({ product, autoStart = null, initialUserMess
         formDataRef.current = EMPTY_FORM;
         setFormErrors({});
         setFormSubmitted(false);
+        setMicMuted(false);
     }, [endSession, status]);
 
     const sendText = useCallback(() => {
@@ -847,6 +851,21 @@ export default function AiConcierge({ product, autoStart = null, initialUserMess
                             >
                                 <ClipboardList className="h-3 w-3" />
                                 Enquiry Form
+                            </button>
+                        )}
+                        {stage === 'voice' && (
+                            <button
+                                type="button"
+                                onClick={() => setMicMuted((m) => !m)}
+                                aria-label={micMuted ? 'Unmute microphone' : 'Mute microphone'}
+                                className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition focus:outline-none focus:ring-2 ${
+                                    micMuted
+                                        ? 'border-gray-300 bg-gray-100 text-gray-600 hover:bg-gray-200 focus:ring-gray-300'
+                                        : 'border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100 focus:ring-blue-300'
+                                }`}
+                            >
+                                {micMuted ? <MicOff className="h-3 w-3" /> : <Mic className="h-3 w-3" />}
+                                {micMuted ? 'Unmute' : 'Mute'}
                             </button>
                         )}
                         {(stage === 'voice' || stage === 'text') && (
@@ -981,11 +1000,18 @@ export default function AiConcierge({ product, autoStart = null, initialUserMess
                                                     {isSpeaking ? 'Agent is speaking…' : 'Speak to fill the form or type below'}
                                                 </p>
                                             </div>
-                                            {/* Live indicator dot */}
-                                            <span className="shrink-0 flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-medium text-green-600 border border-green-200">
-                                                <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-                                                Live
-                                            </span>
+                                            {/* Live / muted indicator */}
+                                            {micMuted ? (
+                                                <span className="shrink-0 flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-500 border border-gray-200">
+                                                    <MicOff className="h-3 w-3" />
+                                                    Muted
+                                                </span>
+                                            ) : (
+                                                <span className="shrink-0 flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-medium text-green-600 border border-green-200">
+                                                    <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+                                                    Live
+                                                </span>
+                                            )}
                                         </motion.div>
                                     ) : (
                                         <motion.div
@@ -997,7 +1023,12 @@ export default function AiConcierge({ product, autoStart = null, initialUserMess
                                             className="flex shrink-0 flex-col items-center justify-center gap-2.5 py-6"
                                         >
                                             <VoiceOrb isSpeaking={isSpeaking} status={status} />
-                                            {statusLabel && (
+                                            {micMuted ? (
+                                                <span className="flex items-center gap-1.5 text-sm font-medium text-gray-500">
+                                                    <MicOff className="h-4 w-4" />
+                                                    Microphone muted
+                                                </span>
+                                            ) : statusLabel && (
                                                 <p className="text-sm font-medium text-[#b59100]">{statusLabel}</p>
                                             )}
                                         </motion.div>
@@ -1199,6 +1230,7 @@ export default function AiConcierge({ product, autoStart = null, initialUserMess
                     <AnimatePresence>
                         {formVisible && stage !== 'voice' && (
                             <EnquiryFormOverlay
+                                key="enquiry-form-overlay"
                                 formData={formData}
                                 onChange={updateFormField}
                                 onSubmit={handleFormSubmit}

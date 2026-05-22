@@ -600,7 +600,7 @@ export default function ProductEnquiryShowV2({ slug, product }) {
 
     return (
         <HomeLayout>
-            <Head title={`Enquire - ${product.product_name}`} />
+            <Head title={`${product.product_name}`} />
 
             <div className="relative mx-auto mt-0 w-full max-w-7xl flex-1 px-4 py-12 sm:px-6 md:py-16 lg:px-8">
                 <nav className="mb-8 text-sm text-gray-500">
