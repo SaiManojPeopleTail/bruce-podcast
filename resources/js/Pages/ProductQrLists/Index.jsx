@@ -4,8 +4,129 @@ import Modal from '@/Components/Modal';
 import PrimaryButton from '@/Components/PrimaryButton';
 import { Head, Link, router } from '@inertiajs/react';
 import { ReactQRCode } from '@lglab/react-qr-code';
-import { Download, QrCode } from 'lucide-react';
+import { Download, Eye, QrCode } from 'lucide-react';
 import { useRef, useState } from 'react';
+import toast from 'react-hot-toast';
+
+function ActiveToggle({ active, loading, onToggle }) {
+    return (
+        <button
+            type="button"
+            onClick={onToggle}
+            disabled={loading}
+            title={active ? 'Published — click to unpublish' : 'Hidden — click to publish'}
+            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-60 ${
+                active ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-slate-600'
+            }`}
+        >
+            <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ${
+                    active ? 'translate-x-4' : 'translate-x-0'
+                }`}
+            />
+        </button>
+    );
+}
+
+function ProductRow({ r, serialNo, onDeleteRequest, onQrRequest }) {
+    const [active, setActive] = useState(Boolean(r.is_active));
+    const [toggling, setToggling] = useState(false);
+
+    const handleToggle = async () => {
+        setToggling(true);
+        try {
+            const res = await fetch(route('product-qr-lists.toggle-active', r.id), {
+                method: 'PATCH',
+                credentials: 'same-origin',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+                    'Accept': 'application/json',
+                },
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setActive(data.is_active);
+                toast.success(data.is_active ? `${r.product_name} is now published` : `${r.product_name} is now hidden`);
+            } else {
+                toast.error('Failed to update status. Please try again.');
+            }
+        } catch {
+            toast.error('Something went wrong.');
+        } finally {
+            setToggling(false);
+        }
+    };
+
+    return (
+        <tr className="hover:bg-gray-50/80 dark:hover:bg-slate-900/30">
+            <td className="w-14 px-4 py-4 text-center text-sm tabular-nums text-gray-500 dark:text-slate-400">
+                {serialNo}
+            </td>
+            <td className="px-4 py-4">
+                <p className="font-medium text-gray-900 dark:text-slate-100">{r.product_name}</p>
+            </td>
+            <td className="px-4 py-4">
+                <span className="font-mono text-xs text-gray-500 dark:text-slate-400">{r.slug}</span>
+            </td>
+            <td className="px-4 py-4 text-sm text-gray-600 dark:text-slate-400">
+                {Array.isArray(r.product_images) ? r.product_images.length : 0}
+            </td>
+            <td className="px-4 py-4 text-sm">
+                {r.video_url ? (
+                    <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+                        Yes
+                    </span>
+                ) : (
+                    <span className="text-gray-400 dark:text-slate-500">—</span>
+                )}
+            </td>
+            <td className="px-4 py-4 text-center">
+                <ActiveToggle active={active} loading={toggling} onToggle={handleToggle} />
+            </td>
+            <td className="whitespace-nowrap px-4 py-4 text-sm text-gray-600 dark:text-slate-400">
+                {formatDate(r.created_at)}
+            </td>
+            <td className="whitespace-nowrap px-4 py-4 text-right">
+                <div className="flex justify-end gap-2">
+                    <a
+                        href={active ? `/product/${r.slug}` : `/product/${r.slug}/preview`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium shadow-sm transition ${
+                            active
+                                ? 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300 dark:hover:bg-emerald-900/40'
+                                : 'border-gray-300 bg-white text-gray-500 hover:bg-gray-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-400 dark:hover:bg-slate-600'
+                        }`}
+                    >
+                        <Eye className="h-4 w-4" />
+                        {active ? 'View' : 'View Draft'}
+                    </a>
+                    <button
+                        type="button"
+                        onClick={() => onQrRequest(r)}
+                        className="inline-flex items-center gap-1.5 rounded-md border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 shadow-sm hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-900/20 dark:text-indigo-300 dark:hover:bg-indigo-900/40"
+                    >
+                        <QrCode className="h-4 w-4" />
+                        QR
+                    </button>
+                    <Link
+                        href={route('product-qr-lists.edit', r.id)}
+                        className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
+                    >
+                        Edit
+                    </Link>
+                    <button
+                        type="button"
+                        onClick={() => onDeleteRequest(r.id)}
+                        className="rounded-md border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-700 shadow-sm hover:bg-red-50 dark:border-red-900/50 dark:bg-slate-800 dark:text-red-400 dark:hover:bg-red-900/20"
+                    >
+                        Delete
+                    </button>
+                </div>
+            </td>
+        </tr>
+    );
+}
 
 const QR_SETTINGS = {
     dataModulesSettings: { style: 'rounded' },
@@ -146,11 +267,11 @@ export default function Index({ products, filters }) {
                             <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
                                 <thead className="bg-gray-50 dark:bg-slate-900/50">
                                     <tr>
-                                        {['S.No.', 'Product', 'Slug', 'Images', 'Video', 'Created', 'Actions'].map((h, i) => (
+                                        {['S.No.', 'Product', 'Slug', 'Images', 'Video', 'Published', 'Created', 'Actions'].map((h, i) => (
                                             <th
                                                 key={h}
                                                 scope="col"
-                                                className={`px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-slate-400 ${i === 0 ? 'w-14 text-center' : i === 6 ? 'text-right' : 'text-left'}`}
+                                                className={`px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-slate-400 ${i === 0 ? 'w-14 text-center' : i === 7 ? 'text-right' : i === 5 ? 'text-center' : 'text-left'}`}
                                             >
                                                 {h}
                                             </th>
@@ -159,59 +280,13 @@ export default function Index({ products, filters }) {
                                 </thead>
                                 <tbody className="divide-y divide-gray-200 dark:divide-slate-700">
                                     {rows.map((r, idx) => (
-                                        <tr key={r.id} className="hover:bg-gray-50/80 dark:hover:bg-slate-900/30">
-                                            <td className="w-14 px-4 py-4 text-center text-sm tabular-nums text-gray-500 dark:text-slate-400">
-                                                {serialNumber(products, idx)}
-                                            </td>
-                                            <td className="px-4 py-4">
-                                                <p className="font-medium text-gray-900 dark:text-slate-100">{r.product_name}</p>
-                                            </td>
-                                            <td className="px-4 py-4">
-                                                <span className="font-mono text-xs text-gray-500 dark:text-slate-400">
-                                                    {r.slug}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-4 text-sm text-gray-600 dark:text-slate-400">
-                                                {Array.isArray(r.product_images) ? r.product_images.length : 0}
-                                            </td>
-                                            <td className="px-4 py-4 text-sm">
-                                                {r.video_url ? (
-                                                    <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
-                                                        Yes
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-gray-400 dark:text-slate-500">—</span>
-                                                )}
-                                            </td>
-                                            <td className="whitespace-nowrap px-4 py-4 text-sm text-gray-600 dark:text-slate-400">
-                                                {formatDate(r.created_at)}
-                                            </td>
-                                            <td className="whitespace-nowrap px-4 py-4 text-right">
-                                                <div className="flex justify-end gap-2">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setQrProduct(r)}
-                                                        className="inline-flex items-center gap-1.5 rounded-md border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 shadow-sm hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-900/20 dark:text-indigo-300 dark:hover:bg-indigo-900/40"
-                                                    >
-                                                        <QrCode className="h-4 w-4" />
-                                                        QR
-                                                    </button>
-                                                    <Link
-                                                        href={route('product-qr-lists.edit', r.id)}
-                                                        className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
-                                                    >
-                                                        Edit
-                                                    </Link>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setDeleteId(r.id)}
-                                                        className="rounded-md border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-700 shadow-sm hover:bg-red-50 dark:border-red-900/50 dark:bg-slate-800 dark:text-red-400 dark:hover:bg-red-900/20"
-                                                    >
-                                                        Delete
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
+                                        <ProductRow
+                                            key={r.id}
+                                            r={r}
+                                            serialNo={serialNumber(products, idx)}
+                                            onDeleteRequest={setDeleteId}
+                                            onQrRequest={setQrProduct}
+                                        />
                                     ))}
                                 </tbody>
                             </table>

@@ -9,6 +9,7 @@ class ProductQrList extends Model
 {
     protected $fillable = [
         'slug',
+        'is_active',
         'product_name',
         'notification_email',
         'product_images',
@@ -26,6 +27,7 @@ class ProductQrList extends Model
     ];
 
     protected $casts = [
+        'is_active' => 'boolean',
         'product_images' => 'array',
         'generated_qr_code_base64' => 'string',
         'retailers' => 'array',

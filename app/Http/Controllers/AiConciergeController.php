@@ -428,14 +428,27 @@ class AiConciergeController extends Controller
     {
         $apiKey = config('services.elevenlabs.api_key');
 
-        Http::withHeaders(['xi-api-key' => $apiKey])->delete(self::KB_BASE . "/{$kbId}");
-
-        // Remove from the agent's base KB list so it no longer shows in overrides
-        if ($apiKey) {
-            $this->syncKbOnAgent($apiKey, $kbId, null, true);
+        if (! $apiKey) {
+            return response()->json(['error' => 'ElevenLabs API key is not configured.'], 500);
         }
 
-        // Delete from the registry — this is the only place it's truly removed
+        // Detach from the agent FIRST — ElevenLabs returns 409 if you try to
+        // delete a KB document that is still attached to an agent.
+        $this->syncKbOnAgent($apiKey, $kbId, null, true);
+
+        // Now delete the document from ElevenLabs
+        $deleteRes = Http::withHeaders(['xi-api-key' => $apiKey])
+            ->delete(self::KB_BASE . "/{$kbId}");
+
+        // 200 = deleted, 404 = already gone — both are acceptable
+        if ($deleteRes->failed() && $deleteRes->status() !== 404) {
+            Log::warning("ElevenLabs KB delete failed for {$kbId}: HTTP {$deleteRes->status()} — {$deleteRes->body()}");
+            return response()->json([
+                'error' => "ElevenLabs returned HTTP {$deleteRes->status()} when deleting the knowledge base. It may still exist in ElevenLabs.",
+            ], 502);
+        }
+
+        // Delete from local registry and unlink from all products
         ElevenLabsKnowledgeBase::where('elevenlabs_kb_id', $kbId)->delete();
 
         ProductQrList::query()

@@ -1,5 +1,5 @@
 import Modal from '@/Components/Modal';
-import { CheckCircle2, ExternalLink, Instagram, Linkedin, Loader2, RefreshCw, Sparkles, X } from 'lucide-react';
+import { Check, CheckCircle2, ExternalLink, Instagram, Linkedin, Loader2, RefreshCw, Sparkles, Store, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 function csrfToken() {
@@ -32,7 +32,7 @@ function normalizePlatform(platform) {
 }
 
 /** Generate a KB filename from company + product names */
-function makeKbFilename(companyName, productName) {
+function makeKbFilename(companyName) {
     const slugPart = (s) =>
         String(s ?? '')
             .toLowerCase()
@@ -42,8 +42,7 @@ function makeKbFilename(companyName, productName) {
     const date = now.toISOString().slice(0, 10);
     const time = now.toTimeString().slice(0, 5).replace(':', '-');
     const c = slugPart(companyName) || 'company';
-    const p = slugPart(productName) || 'product';
-    return `${c}-${p}-KB-${date}-${time}`;
+    return `${c}-KB-${date}-${time}`;
 }
 
 function PostCard({ post }) {
@@ -97,6 +96,11 @@ export default function ProductContentExtractorModal({ show, onClose, onApply })
     const [result, setResult] = useState(null);
     const [error, setError] = useState(null);
 
+    // Shopify detection state
+    const [shopifyStatus, setShopifyStatus] = useState(null); // null | 'checking' | 'found' | 'not_found'
+    const [shopifyImages, setShopifyImages] = useState([]);
+    const [selectedImages, setSelectedImages] = useState(new Set());
+
     // Keep state across open/close — only reset on explicit clear
     const abortRef = useRef(null);
 
@@ -116,10 +120,62 @@ export default function ProductContentExtractorModal({ show, onClose, onApply })
         setThoughts([]);
         setResult(null);
         setError(null);
+        setShopifyStatus(null);
+        setShopifyImages([]);
+        setSelectedImages(new Set());
+    };
+
+    const detectShopify = async (url) => {
+        if (!url?.trim()) return;
+        if (shopifyStatus === 'checking' || shopifyStatus === 'found') return;
+        setShopifyStatus('checking');
+        setShopifyImages([]);
+        setSelectedImages(new Set());
+        try {
+            const { protocol, hostname } = new URL(url.trim());
+            const domain = `${protocol}//${hostname}`;
+            const res = await fetch(`${domain}/products.json?limit=250`);
+            if (!res.ok) { setShopifyStatus('not_found'); return; }
+            const data = await res.json();
+            if (!Array.isArray(data?.products) || data.products.length === 0) {
+                setShopifyStatus('not_found'); return;
+            }
+            const seen = new Set();
+            const imgs = [];
+            for (const product of data.products) {
+                for (const img of product.images ?? []) {
+                    const src = img.src?.split('?')[0]; // strip query params for dedup
+                    if (src && !seen.has(src)) { seen.add(src); imgs.push(img.src); }
+                }
+            }
+            if (imgs.length > 0) {
+                setShopifyStatus('found');
+                setShopifyImages(imgs);
+            } else {
+                setShopifyStatus('not_found');
+            }
+        } catch (err) {
+            console.warn('[Shopify detect]', err);
+            setShopifyStatus('not_found');
+        }
+    };
+
+    const toggleImage = (url) => {
+        setSelectedImages((prev) => {
+            const next = new Set(prev);
+            if (next.has(url)) { next.delete(url); }
+            else if (next.size < 20) { next.add(url); }
+            return next;
+        });
     };
 
     const runExtraction = async () => {
         if (running || !companyUrl.trim()) return;
+
+        // Trigger Shopify detection in parallel if not already done
+        if (shopifyStatus === null) {
+            detectShopify(companyUrl.trim());
+        }
 
         setRunning(true);
         setThoughts(['Preparing GPT web-search extraction...']);
@@ -187,23 +243,18 @@ export default function ProductContentExtractorModal({ show, onClose, onApply })
 
     const applyResult = () => {
         if (!result) return;
-        onApply?.(result);
+        onApply?.({ ...result, shopify_image_urls: [...selectedImages] });
         onClose();
     };
 
-    const kbText = result
-        ? [
-            result.about_company ? `ABOUT THE COMPANY\n${result.about_company}` : '',
-            result.about_product ? `ABOUT THE PRODUCT\n${result.about_product}` : '',
-          ].filter(Boolean).join('\n\n')
-        : '';
+    const kbText = result?.about ?? '';
 
     const kbFilename = result
-        ? makeKbFilename(result.name?.company_name, result.name?.product_name)
+        ? makeKbFilename(result.name?.company_name, '')
         : '';
 
     return (
-        <Modal show={show} onClose={running ? () => {} : onClose} maxWidth="5xl">
+        <Modal show={show} onClose={running ? () => {} : onClose} maxWidth="full">
             <div className="max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-900">
                 <header className="flex items-center justify-between gap-4 border-b border-gray-200 px-5 py-4 dark:border-slate-700">
                     <div>
@@ -246,10 +297,24 @@ export default function ProductContentExtractorModal({ show, onClose, onApply })
                             <input
                                 type="url"
                                 value={companyUrl}
-                                onChange={(e) => setCompanyUrl(e.target.value)}
+                                onChange={(e) => { setCompanyUrl(e.target.value); setShopifyStatus(null); setShopifyImages([]); setSelectedImages(new Set()); }}
+                                onBlur={(e) => detectShopify(e.target.value)}
                                 placeholder="https://company.com/products/product-name"
                                 className="mt-1 block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-[#b59100] focus:ring-[#b59100] dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
                             />
+                            {/* Shopify status badge */}
+                            {shopifyStatus === 'checking' && (
+                                <p className="mt-1.5 flex items-center gap-1.5 text-xs text-gray-400">
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                    Checking for Shopify product catalogue…
+                                </p>
+                            )}
+                            {shopifyStatus === 'found' && (
+                                <p className="mt-1.5 flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
+                                    <Store className="h-3 w-3" />
+                                    Shopify detected — {shopifyImages.length} product images found. Select below.
+                                </p>
+                            )}
                         </div>
 
                         <div className="grid gap-3 sm:grid-cols-2">
@@ -306,6 +371,8 @@ export default function ProductContentExtractorModal({ show, onClose, onApply })
                                 </h4>
                                 <pre ref={thoughtsRef} className="mt-2 max-h-40 overflow-y-auto whitespace-pre-wrap text-xs leading-relaxed text-amber-800 dark:text-amber-100">
                                     {joinedThoughts || 'Starting extraction...'}
+                                    {shopifyStatus === 'checking' ? '\nChecking for Shopify product catalogue…' : ''}
+                                    {shopifyStatus === 'found' ? `\nShopify detected — ${shopifyImages.length} product images loaded.` : ''}
                                 </pre>
                             </div>
                         )}
@@ -316,77 +383,122 @@ export default function ProductContentExtractorModal({ show, onClose, onApply })
                             </div>
                         )}
 
+                        {/* ── Shopify image picker (shown as soon as images load, independent of result) ── */}
+                        {shopifyImages.length > 0 && (
+                            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900/50 dark:bg-emerald-900/20">
+                                <div className="mb-3 flex items-center justify-between">
+                                    <div className="flex items-center gap-1.5">
+                                        <Store className="h-4 w-4 text-emerald-600" />
+                                        <span className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">Shopify product images</span>
+                                        <span className="rounded-full bg-emerald-200 px-1.5 py-0.5 text-[10px] text-emerald-700 dark:bg-emerald-800 dark:text-emerald-300">
+                                            {shopifyImages.length}
+                                        </span>
+                                    </div>
+                                    <span className={`text-xs font-medium ${selectedImages.size >= 20 ? 'text-amber-600' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                                        {selectedImages.size}/20 selected
+                                    </span>
+                                </div>
+                                <div className="flex flex-wrap gap-1.5 overflow-y-auto" style={{ maxHeight: 320 }}>
+                                    {shopifyImages.map((imgUrl) => {
+                                        const checked = selectedImages.has(imgUrl);
+                                        const disabled = !checked && selectedImages.size >= 20;
+                                        return (
+                                            <button
+                                                key={imgUrl}
+                                                type="button"
+                                                onClick={() => toggleImage(imgUrl)}
+                                                disabled={disabled}
+                                                style={{ width: 100, height: 100, flexShrink: 0 }}
+                                                className={`group relative overflow-hidden rounded-lg border-2 transition focus:outline-none
+                                                    ${checked ? 'border-[#b59100] shadow-md' : 'border-transparent hover:border-emerald-400'}
+                                                    ${disabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'}
+                                                `}
+                                            >
+                                                <img src={imgUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
+                                                {checked && <div className="absolute inset-0 bg-[#b59100]/20" />}
+                                                <div className={`absolute right-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded-full shadow transition
+                                                    ${checked ? 'bg-[#b59100] opacity-100' : 'bg-white/80 opacity-0 group-hover:opacity-100'}`}>
+                                                    <Check className="h-2.5 w-2.5 text-white" />
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                {selectedImages.size > 0 && (
+                                    <p className="mt-2 text-xs text-emerald-700 dark:text-emerald-300">{selectedImages.size} image{selectedImages.size > 1 ? 's' : ''} will be inserted when you apply</p>
+                                )}
+                            </div>
+                        )}
+
                         {result && (
-                            <div className="space-y-4 rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-slate-700 dark:bg-slate-800/70">
-                                {/* Names */}
-                                {(result.name?.product_name || result.name?.company_name) && (
-                                    <div className="grid gap-3 sm:grid-cols-2">
-                                        <div>
-                                            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-slate-400">
-                                                Product name
-                                            </label>
-                                            <p className="mt-0.5 text-sm font-medium text-gray-800 dark:text-slate-100">
-                                                {result.name.product_name || '—'}
-                                            </p>
-                                        </div>
+                            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-slate-700 dark:bg-slate-800/70">
+                                <div className="space-y-4">
+                                    {/* Company name */}
+                                    {result.name?.company_name && (
                                         <div>
                                             <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-slate-400">
                                                 Company name
                                             </label>
                                             <p className="mt-0.5 text-sm font-medium text-gray-800 dark:text-slate-100">
-                                                {result.name.company_name || '—'}
+                                                {result.name.company_name}
                                             </p>
                                         </div>
-                                    </div>
-                                )}
+                                    )}
 
-                                {/* Product description (goes into form) */}
-                                <div>
-                                    <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-slate-400">
-                                        Product description
-                                        <span className="ml-1 font-normal normal-case text-[#b59100]">→ fills description field</span>
-                                    </label>
-                                    <textarea
-                                        readOnly
-                                        value={result.product_description ?? ''}
-                                        rows={4}
-                                        className="mt-1 block w-full rounded-md border-gray-200 bg-white text-sm text-gray-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
-                                    />
-                                </div>
-
-                                {/* KB preview */}
-                                {kbText && (
+                                    {/* Description → fills form */}
                                     <div>
                                         <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-slate-400">
-                                            Knowledge base content
-                                            <span className="ml-1 font-normal normal-case text-indigo-500">→ pre-fills KB card</span>
+                                            Description
+                                            <span className="ml-1 font-normal normal-case text-[#b59100]">→ fills description field</span>
                                         </label>
-                                        <p className="mt-0.5 font-mono text-[10px] text-gray-400 dark:text-slate-500">
-                                            {kbFilename}
-                                        </p>
                                         <textarea
                                             readOnly
-                                            value={kbText}
-                                            rows={5}
-                                            className="mt-1 block w-full rounded-md border-gray-200 bg-white text-xs text-gray-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+                                            value={result.description ?? ''}
+                                            rows={4}
+                                            className="mt-1 block w-full rounded-md border-gray-200 bg-white text-sm text-gray-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
                                         />
                                     </div>
-                                )}
 
-                                {result.notes && (
-                                    <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-900/20 dark:text-amber-200">
-                                        {result.notes}
-                                    </div>
-                                )}
+                                    {/* KB preview */}
+                                    {kbText && (
+                                        <div>
+                                            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-slate-400">
+                                                Knowledge base
+                                                <span className="ml-1 font-normal normal-case text-indigo-500">→ pre-fills KB card</span>
+                                            </label>
+                                            <p className="mt-0.5 font-mono text-[10px] text-gray-400 dark:text-slate-500">
+                                                {kbFilename}
+                                            </p>
+                                            <textarea
+                                                readOnly
+                                                value={kbText}
+                                                rows={6}
+                                                className="mt-1 block w-full rounded-md border-gray-200 bg-white text-xs text-gray-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+                                            />
+                                        </div>
+                                    )}
 
-                                <button
-                                    type="button"
-                                    onClick={applyResult}
-                                    className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
-                                >
-                                    <CheckCircle2 className="h-4 w-4" />
-                                    Apply to form
-                                </button>
+                                    {result.notes && (
+                                        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-900/20 dark:text-amber-200">
+                                            {result.notes}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Apply button */}
+                                <div className="mt-4 flex items-center gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={applyResult}
+                                        className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+                                    >
+                                        <CheckCircle2 className="h-4 w-4" />
+                                        Apply to form
+                                    </button>
+                                    {selectedImages.size > 0 && (
+                                        <span className="text-xs text-gray-500">{selectedImages.size} image{selectedImages.size > 1 ? 's' : ''} will be inserted</span>
+                                    )}
+                                </div>
                             </div>
                         )}
                     </div>
@@ -409,6 +521,7 @@ export default function ProductContentExtractorModal({ show, onClose, onApply })
                             </div>
                         </div>
                     )}
+
                 </div>
             </div>
         </Modal>

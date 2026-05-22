@@ -127,6 +127,10 @@ Route::post('/product/{slug}', [ProductEnquiryController::class, 'store'])
     ->name('product-enquiry.record-submission')
     ->where('slug', '[a-z0-9]+(?:-[a-z0-9]+)*');
 
+// Draft preview — excluded from robots.txt, not linked from anywhere public
+Route::get('/product/{slug}/preview', [ProductEnquiryController::class, 'preview'])
+    ->name('product-enquiry.preview');
+
 Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', function () {
         return Inertia::render('Dashboard');
@@ -261,10 +265,13 @@ Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () {
     Route::get('/product-qr-lists/create', [ProductQrListController::class, 'create'])->name('product-qr-lists.create');
     Route::get('/product-qr-lists/check-slug', [ProductQrListController::class, 'checkSlug'])->name('product-qr-lists.check-slug');
     Route::post('/product-qr-lists/extract-content', [ProductContentExtractorController::class, 'extract'])->name('product-qr-lists.extract-content');
+    Route::post('/product-qr-lists/shopify-images', [ProductContentExtractorController::class, 'shopifyImages'])->name('product-qr-lists.shopify-images');
+    Route::post('/product-qr-lists/generate-kb', [ProductContentExtractorController::class, 'generateKb'])->name('product-qr-lists.generate-kb');
     Route::post('/product-qr-lists', [ProductQrListController::class, 'store'])->name('product-qr-lists.store');
     Route::get('/product-qr-lists/{productQrList}/edit', [ProductQrListController::class, 'edit'])->name('product-qr-lists.edit');
     Route::patch('/product-qr-lists/{productQrList}', [ProductQrListController::class, 'update'])->name('product-qr-lists.update');
     Route::delete('/product-qr-lists/{productQrList}', [ProductQrListController::class, 'destroy'])->name('product-qr-lists.destroy');
+    Route::patch('/product-qr-lists/{productQrList}/toggle-active', [ProductQrListController::class, 'toggleActive'])->name('product-qr-lists.toggle-active');
 
     // Social scraper — dedicated page
     Route::get('/social-scraper', [\App\Http\Controllers\SocialScraperController::class, 'page'])

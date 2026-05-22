@@ -1,5 +1,6 @@
-import { AlertCircle, BookOpen, CheckCircle2, Clock, ExternalLink, FileText, Info, Loader2, Search, Trash2, Upload, X } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import KbGeneratorModal from '@/Components/Admin/KbGeneratorModal';
+import { AlertCircle, BookOpen, CheckCircle2, Clock, ExternalLink, FileText, Info, Loader2, Search, Sparkles, Trash2, Upload, X } from 'lucide-react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 
 const POLL_INTERVAL = 4000;
 const TERMINAL_STATUSES = new Set(['succeeded', 'failed', 'rag_limit_exceeded', 'document_too_small', 'cannot_index_folder']);
@@ -189,9 +190,12 @@ function ReusePicker({ currentSlug, onSelect, onPurged }) {
             const res = await fetch(route('ai-concierge.kb.purge', doc.elevenlabs_kb_id), {
                 method: 'DELETE', credentials: 'same-origin', headers: jsonHeaders(),
             });
+            const data = await res.json().catch(() => ({}));
             if (res.ok) {
                 setAllDocs((prev) => prev.filter((d) => d.elevenlabs_kb_id !== doc.elevenlabs_kb_id));
                 onPurged?.(doc.elevenlabs_kb_id);
+            } else {
+                alert(data.error ?? 'Failed to delete from ElevenLabs. Please try again.');
             }
         } finally {
             setPurgingId(null);
@@ -285,7 +289,7 @@ function ReusePicker({ currentSlug, onSelect, onPurged }) {
 }
 
 /* ── Main component ──────────────────────────────────────────────────────── */
-export default function KnowledgeBaseCard({ product, initialText, initialKbName }) {
+const KnowledgeBaseCard = forwardRef(function KnowledgeBaseCard({ product, initialText, initialKbName, hideUploadButton = false, onTextChange }, ref) {
     const defaultKbName = `${product.product_name ?? 'Product'} — Knowledge Base`;
 
     const [mode, setMode]         = useState('text'); // 'text' | 'file' | 'reuse'
@@ -302,6 +306,7 @@ export default function KnowledgeBaseCard({ product, initialText, initialKbName 
     const [editingName, setEditingName]     = useState(false);
     const nameInputRef = useRef(null);
     const [confirm, confirmDialog]  = useConfirm();
+    const [showKbGenerator, setShowKbGenerator] = useState(false);
 
     const [kbId, setKbId]         = useState(product.elevenlabs_kb_id ?? null);
     const [ragStatus, setRagStatus] = useState(product.kb_rag_status ?? null);
@@ -352,6 +357,7 @@ export default function KnowledgeBaseCard({ product, initialText, initialKbName 
     const handleUpload = async () => {
         setError(null);
         if (mode === 'text' && !text.trim()) { setError('Please enter some text.'); return; }
+        if (mode === 'text' && text.trim().length < 100) { setError('Knowledge base content must be at least 100 characters.'); return; }
         if (mode === 'file' && !file)         { setError('Please select a file.');   return; }
         setUploading(true);
         setEditingName(false);
@@ -365,14 +371,21 @@ export default function KnowledgeBaseCard({ product, initialText, initialKbName 
                 method: 'POST', credentials: 'same-origin', headers: jsonHeaders(), body: fd,
             });
             const data = await res.json();
-            if (!res.ok) { setError(data.error ?? 'Upload failed.'); return; }
+            if (!res.ok) { const msg = data.error ?? 'Upload failed.'; setError(msg); throw new Error(msg); }
             setKbId(data.kb_id); setRagStatus(data.rag_status); setKbName(data.kb_name); setKbType(data.kb_type ?? null);
             setText(''); setFile(null); setFileName('');
             setCustomName(defaultKbName);
             if (!TERMINAL_STATUSES.has(data.rag_status)) startPolling();
-        } catch { setError('Unexpected error during upload.'); }
+        } catch (err) { const msg = err?.message ?? 'Unexpected error during upload.'; setError(msg); throw err; }
         finally { setUploading(false); }
     };
+
+    /* ── Expose upload() for parent forms that want to trigger it on save ── */
+    useImperativeHandle(ref, () => ({
+        hasPendingContent: () => (mode === 'text' && text.trim().length >= 100) || (mode === 'file' && !!file),
+        // Returns a Promise so callers can await completion / catch errors
+        upload: () => handleUpload(),
+    }));
 
     /* ── Assign existing ── */
     const handleAssign = async (doc) => {
@@ -529,13 +542,34 @@ export default function KnowledgeBaseCard({ product, initialText, initialKbName 
 
                     {/* Tab content */}
                     {mode === 'text' && (
-                        <textarea
-                            value={text}
-                            onChange={(e) => setText(e.target.value)}
-                            rows={6}
-                            placeholder="Paste product details, FAQs, ingredient lists, usage instructions…"
-                            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-800 placeholder-gray-400 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:placeholder-slate-500"
-                        />
+                        <div>
+                            <textarea
+                                value={text}
+                                onChange={(e) => { setText(e.target.value); setError(null); onTextChange?.(e.target.value); }}
+                                rows={6}
+                                placeholder="Paste product details, FAQs, ingredient lists, usage instructions…"
+                                className={`w-full rounded-lg border px-3 py-2 text-xs text-gray-800 placeholder-gray-400 shadow-sm focus:ring-indigo-500 dark:bg-slate-800 dark:text-slate-200 dark:placeholder-slate-500 ${
+                                    text.trim().length > 0 && text.trim().length < 100
+                                        ? 'border-amber-400 bg-amber-50/40 focus:border-amber-500 dark:border-amber-600 dark:bg-amber-900/10'
+                                        : 'border-gray-300 bg-white focus:border-indigo-500 dark:border-slate-600'
+                                }`}
+                            />
+                            <div className="mt-1.5 flex items-center justify-between">
+                                {text.trim().length > 0 && text.trim().length < 100 ? (
+                                    <p className="text-xs text-amber-600 dark:text-amber-400">
+                                        {100 - text.trim().length} more characters needed (minimum 100)
+                                    </p>
+                                ) : <span />}
+                                <button
+                                    type="button"
+                                    onClick={() => setShowKbGenerator(true)}
+                                    className="inline-flex items-center gap-1.5 rounded-lg border border-[#b59100]/40 bg-[#b59100]/10 px-2.5 py-1 text-xs font-medium text-[#b59100] hover:bg-[#b59100]/20 dark:border-[#b59100]/30 dark:bg-[#b59100]/10 dark:text-[#e6b800]"
+                                >
+                                    <Sparkles className="h-3 w-3" />
+                                    Generate
+                                </button>
+                            </div>
+                        </div>
                     )}
 
                     {mode === 'file' && (
@@ -601,8 +635,8 @@ export default function KnowledgeBaseCard({ product, initialText, initialKbName 
                         </p>
                     )}
 
-                    {/* Action button (hidden for reuse tab — selection triggers action directly) */}
-                    {mode !== 'reuse' && (
+                    {/* Action button — hidden when parent form handles upload on save */}
+                    {mode !== 'reuse' && !hideUploadButton && (
                         <button
                             type="button"
                             onClick={handleUpload}
@@ -615,6 +649,11 @@ export default function KnowledgeBaseCard({ product, initialText, initialKbName 
                             }
                         </button>
                     )}
+                    {mode !== 'reuse' && hideUploadButton && (
+                        uploading
+                            ? <p className="mt-3 flex items-center gap-2 text-xs text-indigo-600 dark:text-indigo-400"><Loader2 className="h-3.5 w-3.5 animate-spin" />Uploading &amp; indexing knowledge base…</p>
+                            : <p className="mt-2 text-xs text-gray-400 dark:text-slate-500">Knowledge base will be uploaded when you save the form.</p>
+                    )}
 
                     {assigning && (
                         <div className="mt-3 flex items-center justify-center gap-2 text-xs text-gray-500 dark:text-slate-400">
@@ -623,6 +662,13 @@ export default function KnowledgeBaseCard({ product, initialText, initialKbName 
                     )}
                 </div>
             </div>
+            <KbGeneratorModal
+                show={showKbGenerator}
+                onClose={() => setShowKbGenerator(false)}
+                onApply={(kbText) => { setText(kbText); setError(null); onTextChange?.(kbText); }}
+            />
         </>
     );
-}
+});
+
+export default KnowledgeBaseCard;

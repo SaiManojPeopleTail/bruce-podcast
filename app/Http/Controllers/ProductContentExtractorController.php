@@ -9,14 +9,13 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class ProductContentExtractorController extends Controller
 {
     private const INSTRUCTIONS = <<<'TEXT'
-# Agent Instructions: Company + Product + Social Extraction -> Strict JSON Output
+# Agent Instructions: Company + Social Extraction -> Strict JSON Output
 
 ## Objective
 
-Extract structured information about:
-1. The company behind the provided URL
-2. The product shown in the URL
-3. The company's top social posts only from Instagram and LinkedIn
+Extract structured information about the COMPANY behind the provided URL.
+Focus on the company as a whole — do NOT focus on any single product page even if the URL is a product page.
+Also extract the company's top social posts from Instagram and LinkedIn.
 
 Return JSON only.
 
@@ -26,17 +25,16 @@ company_url: <required>
 instagram_url: <optional>
 linkedin_url: <optional>
 instagram_profile_posts_json: <optional, trusted tool result from SocialApis Instagram profile posts API>
+shopify_products_json: <optional, plain-text summary of all products from the company's Shopify store — use as PRIMARY source for product details in the `about` knowledge base field>
 
 ## Required Output Schema
 
 {
   "name": {
-    "product_name": "",
     "company_name": ""
   },
-  "about_company": "",
-  "about_product": "",
-  "product_description": "",
+  "description": "",
+  "about": "",
   "social_links": [
     {
       "platform": "",
@@ -51,26 +49,37 @@ instagram_profile_posts_json: <optional, trusted tool result from SocialApis Ins
 
 ### 1) name
 
-Extract exact names — do not invent or generalise.
-
-product_name:
-* The specific product name as shown on the product page (e.g. "Omega-3 Fish Oil 1000mg")
-* If unavailable, use an empty string
-
 company_name:
-* The brand or company name only (e.g. "NutriCo")
-* No descriptors, no taglines
+* Copy the brand or company name EXACTLY as it appears on the official website — preserve original capitalisation, spacing, and punctuation (e.g. "EarthSuds", "Ginger Bug", "La Roche-Posay", "dr. bronner's")
+* Do NOT lowercase, slug-ify, or normalise the name in any way
+* No descriptors, no taglines — the brand name only
 * If unavailable, use an empty string
 
-### 2) about_company (knowledge-base copy — long, unformatted)
+### 2) description (rich HTML page copy — engaging, company-level)
 
 Generate:
-* Comprehensive, unformatted plain text — no markdown
-* 150-300 words
-* Cover: founding, mission, product categories, target audience, distribution/retail presence, any notable achievements or certifications visible on official sources
+* HTML-formatted text using only: <p>, <strong>, <ul>, <li> tags
+* 100-180 words maximum
+* Engaging, benefit-focused, mission-driven — rewrite from official language
+* About the COMPANY and its range of products/services — NOT about a single product
+* Use <strong> for key brand terms and benefits, <ul><li> for key product lines or features, <p> for paragraphs
+* No markdown, no headings, no <h1>-<h6>, no <a>, no inline styles
+* Convey: what the company does, who it is for, what makes it unique
+
+Fallback:
+description = ""
+
+### 3) about (knowledge-base copy — comprehensive, plain text)
+
+Generate:
+* Plain unformatted text — no HTML tags, no markdown
+* 400-600 words total
+* Structure:
+  - Company overview: founding story, mission, values, certifications, target audience, distribution
+  - Products & range: cover ALL product categories/lines the company sells — name each product line, key ingredients or features, intended use, formats available
 
 Allowed sources:
-* official company website (About, Our Story pages)
+* official company website (Homepage, About, Our Story, Products pages)
 * official Instagram bio + posts
 * official LinkedIn
 
@@ -78,40 +87,18 @@ Restrictions:
 * Never infer or embellish
 * Never use third-party websites or review sites
 * Omit unsupported claims
+* No pricing, no reviews, no testimonials
+
+If `shopify_products_json` is provided:
+* Use it as the PRIMARY source for ALL product information in the `about` field
+* List every product by name with: key ingredients/materials, intended use, variants/formats available
+* This data is authoritative — prefer it over web search results for product details
+* Do NOT copy raw JSON — convert to readable plain prose
 
 Fallback:
-about_company = "Unable to determine from official sources."
+about = "Unable to determine from official sources."
 
-### 3) about_product (knowledge-base copy — long, unformatted)
-
-Generate:
-* Comprehensive, unformatted plain text — no markdown
-* 300-500 words
-* Include ALL of: product category, intended use, full ingredients/components list, dosage, delivery format, mechanisms/features, certifications, packaging details, directions for use — whatever is available from official sources
-
-Exclude:
-* pricing, reviews, testimonials, comparisons, unsupported medical claims, opinions
-
-Rules:
-* Summarize only official content
-* Rewrite in neutral language
-
-Fallback:
-about_product = "Product details unavailable from official sources."
-
-### 4) product_description (formatted page copy — concise)
-
-Generate:
-* This is the FORMATTED description that will appear on the product's public page
-* 100-180 words maximum
-* Engaging, benefit-focused prose — rewrite from official language
-* Use plain paragraph text, no headings, no bullet lists, no markdown
-* Convey: what the product is, who it is for, key benefits or features
-
-Fallback:
-product_description = ""
-
-### 5) social_links
+### 4) social_links
 
 Platforms allowed: Instagram, LinkedIn
 
@@ -187,7 +174,7 @@ TEXT;
 
             $emit = function (string $event, array $data): void {
                 echo "event: {$event}\n";
-                echo 'data: '.json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)."\n\n";
+                echo 'data: '.json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE)."\n\n";
                 echo str_repeat(' ', 256)."\n\n";
                 @flush();
             };
@@ -227,10 +214,20 @@ TEXT;
                 }
             }
 
+            // Try to fetch Shopify products.json for richer KB generation
+            $emit('thought', ['text' => 'Checking for Shopify product catalogue to enrich knowledge base…']);
+            $shopifyText = $this->fetchShopifyProductsText($validated['company_url']);
+            if ($shopifyText !== '') {
+                $emit('thought', ['text' => 'Shopify products.json found — attaching product catalogue to extraction context.']);
+            } else {
+                $emit('thought', ['text' => 'No Shopify products.json found — relying on web search for product details.']);
+            }
+
             $input = "company_url: {$validated['company_url']}\n"
                 .'instagram_url: '.$instagramUrl."\n"
                 .'linkedin_url: '.$linkedinUrl."\n"
-                .'instagram_profile_posts_json: '.json_encode($instagramPosts, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)."\n";
+                .'instagram_profile_posts_json: '.json_encode($instagramPosts, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE)."\n"
+                .($shopifyText !== '' ? "\nshopify_products_json:\n{$shopifyText}\n" : '');
 
             try {
                 $emit('thought', ['text' => 'Calling GPT with web_search + streaming enabled, reasoning effort: medium.']);
@@ -455,6 +452,61 @@ TEXT;
 
     /**
      * @param  callable(string, array<string,mixed>): void  $emit
+     * Fetch Shopify products.json and return a condensed plain-text summary
+     * suitable for injection into the GPT prompt as knowledge-base material.
+     * Returns an empty string if the site is not Shopify or the request fails.
+     */
+    private function fetchShopifyProductsText(string $companyUrl): string
+    {
+        // Strip invalid UTF-8 bytes so json_encode never chokes on Shopify content
+        $utf8 = static function (mixed $v): string {
+            $s = is_string($v) ? $v : (string) $v;
+            // iconv with //IGNORE drops bytes that cannot be represented in UTF-8
+            $clean = @iconv('UTF-8', 'UTF-8//IGNORE', $s);
+            return $clean !== false ? $clean : preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $s) ?? $s;
+        };
+
+        try {
+            $parsed = parse_url($companyUrl);
+            if (empty($parsed['host'])) return '';
+            $scheme = $parsed['scheme'] ?? 'https';
+            $domain = "{$scheme}://{$parsed['host']}";
+
+            $res = Http::timeout(10)->get("{$domain}/products.json?limit=250");
+            if (! $res->successful()) return '';
+
+            $data = $res->json();
+            if (! is_array($data['products'] ?? null) || empty($data['products'])) return '';
+
+            $lines = [];
+            foreach ($data['products'] as $product) {
+                $name     = $utf8($product['title'] ?? '');
+                $vendor   = $utf8($product['vendor'] ?? '');
+                $title    = $utf8($product['product_type'] ?? '');
+                $body     = $utf8(trim(strip_tags($product['body_html'] ?? '')));
+                // Condense body to first 300 chars (byte-safe)
+                if (mb_strlen($body) > 300) $body = mb_substr($body, 0, 300) . '…';
+                $tags     = implode(', ', array_map($utf8, $product['tags'] ?? []));
+                $variants = collect($product['variants'] ?? [])
+                    ->map(fn($v) => $utf8(trim($v['title'] ?? '')))
+                    ->filter()->unique()->implode(' | ');
+
+                $line = "Product: {$name}";
+                if ($vendor)   $line .= " | Brand: {$vendor}";
+                if ($title)    $line .= " | Type: {$title}";
+                if ($variants) $line .= " | Variants: {$variants}";
+                if ($body)     $line .= "\n  Description: {$body}";
+                if ($tags)     $line .= "\n  Tags: {$tags}";
+                $lines[] = $line;
+            }
+
+            return implode("\n\n", $lines);
+        } catch (\Throwable) {
+            return '';
+        }
+    }
+
+    /**
      * @return list<array{platform: string, post_url: string, description: string}>
      */
     private function fetchInstagramPosts(string $username, callable $emit): array
@@ -703,15 +755,159 @@ TEXT;
 
         return [
             'name' => [
-                'product_name' => (string) ($nameRaw['product_name'] ?? ''),
-                'company_name'  => (string) ($nameRaw['company_name'] ?? ''),
+                'company_name' => (string) ($nameRaw['company_name'] ?? ''),
             ],
-            'about_company'       => (string) ($raw['about_company'] ?? ''),
-            'about_product'       => (string) ($raw['about_product'] ?? ''),
-            'product_description' => (string) ($raw['product_description'] ?? ''),
-            'social_links'        => $posts,
-            'notes'               => (string) ($raw['notes'] ?? ''),
+            'description'  => (string) ($raw['description'] ?? ''),
+            'about'        => (string) ($raw['about'] ?? ''),
+            'social_links' => $posts,
+            'notes'        => (string) ($raw['notes'] ?? ''),
         ];
+    }
+
+    /**
+     * Detect a Shopify store from a URL, fetch its products.json, and return suitable image URLs.
+     * GPT is used to select the best images only when there are too many (>30).
+     * No streaming, no reasoning effort — this is a fast synchronous call.
+     */
+    public function shopifyImages(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $validated = $request->validate([
+            'company_url' => ['required', 'string', 'url'],
+        ]);
+
+        $parsed = parse_url($validated['company_url']);
+        if (! $parsed || empty($parsed['host'])) {
+            return response()->json(['is_shopify' => false, 'images' => [], 'message' => 'Invalid URL.']);
+        }
+
+        $domain = ($parsed['scheme'] ?? 'https').'://'.$parsed['host'];
+
+        try {
+            $res = Http::timeout(10)
+                ->withHeaders(['User-Agent' => 'Mozilla/5.0 (compatible; ProductBot/1.0)'])
+                ->get("{$domain}/products.json", ['limit' => 250]);
+        } catch (\Exception) {
+            return response()->json(['is_shopify' => false, 'images' => [], 'message' => 'Could not reach the website.']);
+        }
+
+        if (! $res->ok()) {
+            return response()->json(['is_shopify' => false, 'images' => [], 'message' => 'Not a Shopify store or products not accessible.']);
+        }
+
+        $data = $res->json();
+        if (! isset($data['products']) || ! is_array($data['products'])) {
+            return response()->json(['is_shopify' => false, 'images' => [], 'message' => 'Not a Shopify store.']);
+        }
+
+        $products = $data['products'];
+        if (empty($products)) {
+            return response()->json(['is_shopify' => true, 'images' => [], 'message' => 'No products found.']);
+        }
+
+        // Collect all image URLs with context
+        $allImages = [];
+        foreach ($products as $product) {
+            $title = (string) ($product['title'] ?? '');
+            foreach ($product['images'] ?? [] as $img) {
+                if (! empty($img['src'])) {
+                    $allImages[] = [
+                        'src'           => (string) $img['src'],
+                        'product_title' => $title,
+                        'position'      => (int) ($img['position'] ?? 1),
+                    ];
+                }
+            }
+        }
+
+        if (empty($allImages)) {
+            return response()->json(['is_shopify' => true, 'images' => [], 'message' => 'No images found.']);
+        }
+
+        // 30 or fewer — just return them all sorted by position
+        if (count($allImages) <= 30) {
+            $urls = collect($allImages)->sortBy('position')->pluck('src')->unique()->values()->all();
+
+            return response()->json(['is_shopify' => true, 'images' => $urls, 'count' => count($urls)]);
+        }
+
+        // More than 30 — ask GPT (no reasoning effort) to pick the best ones
+        $apiKey = config('services.openai.api_key');
+        $model  = config('services.openai.model', 'gpt-4o-mini');
+
+        $fallbackUrls = fn () => collect($allImages)
+            ->where('position', 1)
+            ->pluck('src')
+            ->unique()
+            ->take(30)
+            ->values()
+            ->all();
+
+        if (! $apiKey) {
+            return response()->json(['is_shopify' => true, 'images' => $fallbackUrls(), 'count' => count($fallbackUrls())]);
+        }
+
+        $imageLines = collect($allImages)
+            ->take(100)
+            ->map(fn ($img) => "pos:{$img['position']} product:\"{$img['product_title']}\" url:{$img['src']}")
+            ->join("\n");
+
+        try {
+            $gptRes = Http::withToken($apiKey)
+                ->timeout(30)
+                ->post('https://api.openai.com/v1/responses', [
+                    'model'  => $model,
+                    'stream' => false,
+                    'input'  => [[
+                        'role'    => 'user',
+                        'content' => "Select up to 30 product showcase image URLs from the list below. Prefer position-1 hero shots. Exclude images whose filename contains keywords like 'how-to', 'ingredient', 'instruction', 'step'. Return JSON only.\n\n{$imageLines}",
+                    ]],
+                    'text' => [
+                        'format' => [
+                            'type'   => 'json_schema',
+                            'name'   => 'selected_images',
+                            'strict' => true,
+                            'schema' => [
+                                'type'       => 'object',
+                                'properties' => [
+                                    'selected_urls' => ['type' => 'array', 'items' => ['type' => 'string']],
+                                ],
+                                'required'             => ['selected_urls'],
+                                'additionalProperties' => false,
+                            ],
+                        ],
+                    ],
+                ]);
+
+            if (! $gptRes->ok()) {
+                throw new \Exception('GPT call failed');
+            }
+
+            // Parse non-streaming Responses API output
+            $text = '';
+            foreach ($gptRes->json('output') ?? [] as $item) {
+                if (($item['type'] ?? '') === 'message') {
+                    foreach ($item['content'] ?? [] as $c) {
+                        if (($c['type'] ?? '') === 'output_text') {
+                            $text = $c['text'] ?? '';
+                            break 2;
+                        }
+                    }
+                }
+            }
+
+            $selected = json_decode($text, true)['selected_urls'] ?? [];
+            if (empty($selected)) {
+                throw new \Exception('Empty selection');
+            }
+
+            $urls = array_values(array_unique($selected));
+
+            return response()->json(['is_shopify' => true, 'images' => $urls, 'count' => count($urls)]);
+        } catch (\Exception) {
+            $fb = $fallbackUrls();
+
+            return response()->json(['is_shopify' => true, 'images' => $fb, 'count' => count($fb)]);
+        }
     }
 
     /**
@@ -725,19 +921,17 @@ TEXT;
                 'name' => [
                     'type' => 'object',
                     'properties' => [
-                        'product_name' => ['type' => 'string'],
-                        'company_name'  => ['type' => 'string'],
+                        'company_name' => ['type' => 'string'],
                     ],
-                    'required' => ['product_name', 'company_name'],
+                    'required'             => ['company_name'],
                     'additionalProperties' => false,
                 ],
-                'about_company'       => ['type' => 'string'],
-                'about_product'       => ['type' => 'string'],
-                'product_description' => ['type' => 'string'],
+                'description' => ['type' => 'string'],
+                'about'       => ['type' => 'string'],
                 'social_links' => [
-                    'type' => 'array',
+                    'type'     => 'array',
                     'maxItems' => 10,
-                    'items' => [
+                    'items'    => [
                         'type' => 'object',
                         'properties' => [
                             'platform'    => ['type' => 'string', 'enum' => ['instagram', 'linkedin']],
@@ -750,8 +944,155 @@ TEXT;
                 ],
                 'notes' => ['type' => 'string'],
             ],
-            'required'             => ['name', 'about_company', 'about_product', 'product_description', 'social_links', 'notes'],
+            'required'             => ['name', 'description', 'about', 'social_links', 'notes'],
             'additionalProperties' => false,
         ];
+    }
+
+    /* ── KB-only generation ─────────────────────────────────────────────── */
+
+    private const KB_INSTRUCTIONS = <<<'TEXT'
+# Agent Instructions: Knowledge Base Generation
+
+## Objective
+
+Generate a comprehensive, plain-text knowledge base document about the COMPANY behind the provided URL.
+This content will be fed directly to an AI assistant as its knowledge base — it must be accurate, detailed, and well-structured.
+
+## Input
+
+company_url: <required>
+shopify_products_json: <optional, plain-text summary of all products from the company's Shopify store>
+
+## Output
+
+Return plain unformatted text only — no HTML, no markdown, no JSON.
+
+Structure the output as follows:
+
+COMPANY OVERVIEW
+[Company name, founding story, mission, values, certifications, target audience, where they sell]
+
+PRODUCTS & RANGE
+[Cover every product line and individual product. For each: product name, key ingredients or materials, intended use, available formats/variants, what makes it unique]
+
+BRAND VALUES & DIFFERENTIATORS
+[What sets this company apart — sustainability, sourcing, ethics, community, etc.]
+
+FREQUENTLY ASKED QUESTIONS
+[Anticipate 5-8 questions a customer might ask the AI about this company or its products]
+
+## Rules
+* Use shopify_products_json as PRIMARY source for product details when provided
+* Supplement with web search for company overview, brand story, and FAQs
+* Plain text only — no bullet symbols, no markdown, no HTML
+* 600-1200 words total
+* Never infer or fabricate — omit if unsure
+* Do NOT add any notes, disclaimers, caveats, citations, source references, or footnotes — anywhere in the output
+* Do NOT add a "Notes", "Sources", "Disclaimer", "Limitations", or any similar trailing section
+* End the output after the FREQUENTLY ASKED QUESTIONS section — nothing after
+TEXT;
+
+    public function generateKb(Request $request): StreamedResponse
+    {
+        $validated = $request->validate([
+            'company_url' => ['required', 'string', 'max:2048', 'url'],
+        ]);
+
+        return response()->stream(function () use ($validated) {
+            @set_time_limit(0);
+            @ini_set('output_buffering', '0');
+            @ini_set('zlib.output_compression', '0');
+            while (ob_get_level() > 0) @ob_end_flush();
+
+            $emit = function (string $event, array $data): void {
+                echo "event: {$event}\n";
+                echo 'data: '.json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE)."\n\n";
+                echo str_repeat(' ', 256)."\n\n";
+                @flush();
+            };
+
+            $apiKey = config('services.openai.api_key');
+            if (! $apiKey) {
+                $emit('error', ['message' => 'OPENAI_API_KEY is not configured.']);
+                return;
+            }
+
+            $emit('thought', ['text' => 'Checking for Shopify product catalogue…']);
+            $shopifyText = $this->fetchShopifyProductsText($validated['company_url']);
+            if ($shopifyText !== '') {
+                $emit('thought', ['text' => 'Shopify products.json found — product catalogue will be used as primary source.']);
+            } else {
+                $emit('thought', ['text' => 'No Shopify catalogue found — will rely on web search.']);
+            }
+
+            $input = "company_url: {$validated['company_url']}\n"
+                .($shopifyText !== '' ? "\nshopify_products_json:\n{$shopifyText}\n" : '');
+
+            $emit('thought', ['text' => 'Calling GPT to generate knowledge base…']);
+
+            try {
+                $streamResponse = Http::withToken($apiKey)
+                    ->withOptions(['stream' => true, 'read_timeout' => 120])
+                    ->withHeaders(['Accept' => 'text/event-stream'])
+                    ->asJson()
+                    ->timeout(120)
+                    ->post('https://api.openai.com/v1/responses', [
+                        'model'        => config('services.openai.model', 'gpt-4o-mini'),
+                        'instructions' => self::KB_INSTRUCTIONS,
+                        'input'        => $input,
+                        'stream'       => true,
+                        'tools'        => [['type' => config('services.openai.web_search_tool', 'web_search')]],
+                    ]);
+
+                if ($streamResponse->status() >= 400) {
+                    $emit('error', ['message' => 'GPT request failed.', 'detail' => (string) $streamResponse->body()]);
+                    return;
+                }
+
+                $body       = $streamResponse->toPsrResponse()->getBody();
+                $lineBuffer = '';
+                $outputText = '';
+                $currentEventType = '';
+
+                while (! $body->eof()) {
+                    $chunk = $body->read(512);
+                    if ($chunk === '' || $chunk === false) continue;
+                    $lineBuffer .= $chunk;
+
+                    while (($nl = strpos($lineBuffer, "\n")) !== false) {
+                        $line       = rtrim(substr($lineBuffer, 0, $nl), "\r");
+                        $lineBuffer = substr($lineBuffer, $nl + 1);
+
+                        if ($line === '') { $currentEventType = ''; continue; }
+                        if (str_starts_with($line, 'event: ')) { $currentEventType = trim(substr($line, 7)); continue; }
+                        if (! str_starts_with($line, 'data: ')) continue;
+
+                        $raw = substr($line, 6);
+                        if ($raw === '[DONE]') break 2;
+                        $data = json_decode($raw, true);
+                        if (! is_array($data)) continue;
+
+                        $this->handleStreamEvent($currentEventType, $data, $emit, $outputText);
+                    }
+                }
+
+                $kbText = trim($outputText);
+                if ($kbText === '') {
+                    $emit('error', ['message' => 'GPT returned an empty response.']);
+                    return;
+                }
+
+                $emit('result', ['kb_text' => $kbText]);
+                $emit('done', []);
+            } catch (\Throwable $e) {
+                report($e);
+                $emit('error', ['message' => $e->getMessage()]);
+            }
+        }, 200, [
+            'Content-Type'      => 'text/event-stream',
+            'Cache-Control'     => 'no-cache',
+            'X-Accel-Buffering' => 'no',
+        ]);
     }
 }

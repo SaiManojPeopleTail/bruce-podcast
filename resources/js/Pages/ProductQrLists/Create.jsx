@@ -9,7 +9,7 @@ import RichTextEditor from '@/Components/RichTextEditor';
 import { Head, router } from '@inertiajs/react';
 import { ReactQRCode } from '@lglab/react-qr-code';
 import axios from 'axios';
-import { BookOpen, CheckCircle, CheckCircle2, Film, ImagePlus, Loader2, Video, X, XCircle } from 'lucide-react';
+import { AlertTriangle, BookOpen, CheckCircle, CheckCircle2, Film, ImagePlus, Loader2, Video, X, XCircle } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 
@@ -72,6 +72,7 @@ export default function Create() {
     const [pendingKbName, setPendingKbName] = useState('');
     const [firstMessage, setFirstMessage] = useState('');
     const [voiceId, setVoiceId] = useState('');
+    const [shopifyImageUrls, setShopifyImageUrls] = useState([]); // external CDN URLs from Shopify picker
     // Gallery media: parallel arrays of File and {url, type}
     const [mediaFiles, setMediaFiles] = useState([]); // File[]
     const [mediaPreviews, setMediaPreviews] = useState([]); // {url: string, type: 'image'|'video'}[]
@@ -81,6 +82,7 @@ export default function Create() {
     const [notificationEmail, setNotificationEmail] = useState('');
     const [errors, setErrors] = useState({});
     const [processing, setProcessing] = useState(false);
+    const [saveProgress, setSaveProgress] = useState(null);
     const [draggingMedia, setDraggingMedia] = useState(false);
     const [draggingVideo, setDraggingVideo] = useState(false);
     const [showAutoModal, setShowAutoModal] = useState(false);
@@ -233,15 +235,41 @@ export default function Create() {
             fd.append('retailers', JSON.stringify(resolvedRetailers));
         }
         mediaFiles.forEach((file, i) => fd.append(`images[${i}]`, file));
+        shopifyImageUrls.forEach((url, i) => fd.append(`shopify_image_urls[${i}]`, url));
         if (video) fd.append('video', video);
+
+        const hasShopifyImages = shopifyImageUrls.length > 0;
+        const hasKb = pendingKbText.trim().length >= 100;
+
+        const steps = [
+            { id: 'save', label: 'Creating QR Company…', status: 'active' },
+            ...(hasShopifyImages ? [{ id: 'images', label: `Uploading ${shopifyImageUrls.length} product image${shopifyImageUrls.length > 1 ? 's' : ''} to S3…`, status: 'active' }] : []),
+            ...(hasKb ? [{ id: 'kb', label: 'Uploading knowledge base…', status: 'active' }] : []),
+        ];
+        setSaveProgress({ steps, error: null });
 
         router.post(route('product-qr-lists.store'), fd, {
             forceFormData: true,
             onError: (errs) => {
                 setErrors(errs);
                 setProcessing(false);
+                setSaveProgress((p) => p ? {
+                    ...p,
+                    steps: p.steps.map((s) => ({ ...s, status: s.status === 'active' ? 'error' : s.status })),
+                    error: 'Failed to save. Please check the form and try again.',
+                } : null);
             },
             onFinish: () => setProcessing(false),
+            onSuccess: () => {
+                setSaveProgress((p) => p ? {
+                    ...p,
+                    steps: p.steps.map((s) => ({ ...s, status: 'done' })),
+                } : null);
+                setTimeout(() => {
+                    setSaveProgress(null);
+                    router.visit(route('product-qr-lists.index'));
+                }, 1200);
+            },
         });
     };
 
@@ -462,6 +490,34 @@ export default function Create() {
                                 </label>
                             )}
                             <InputError message={errors.images} className="mt-1" />
+
+                            {/* Shopify images preview */}
+                            {shopifyImageUrls.length > 0 && (
+                                <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-900/50 dark:bg-emerald-900/20">
+                                    <div className="mb-2 flex items-center justify-between">
+                                        <span className="text-xs font-semibold text-emerald-800 dark:text-emerald-200">
+                                            {shopifyImageUrls.length} Shopify image{shopifyImageUrls.length > 1 ? 's' : ''} will be saved
+                                        </span>
+                                        <button type="button" onClick={() => setShopifyImageUrls([])} className="text-xs text-emerald-600 hover:text-emerald-800 dark:text-emerald-400">
+                                            Clear
+                                        </button>
+                                    </div>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {shopifyImageUrls.map((url, i) => (
+                                            <div key={i} className="group relative h-12 w-12 shrink-0">
+                                                <img src={url} alt="" className="h-full w-full rounded object-cover" loading="lazy" />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShopifyImageUrls((prev) => prev.filter((_, idx) => idx !== i))}
+                                                    className="absolute -right-1 -top-1 hidden h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white shadow group-hover:flex"
+                                                >
+                                                    <span className="text-[9px] font-bold leading-none">✕</span>
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {/* Video */}
@@ -637,31 +693,92 @@ export default function Create() {
                 show={showAutoModal}
                 onClose={() => setShowAutoModal(false)}
                 onApply={(result) => {
-                    if (result?.name?.product_name) {
-                        const name = result.name.product_name;
+                    // Company name → fills the QR listing name
+                    if (result?.name?.company_name) {
+                        const name = result.name.company_name;
                         setProductName(name);
                         const raw = toSlug(name);
                         setSlug(raw);
                         if (raw) { setSlugStatus('checking'); checkSlug(raw); }
                     }
-                    if (result?.product_description) setDescription(result.product_description);
+                    // Company description → fills the description field
+                    if (result?.description) setDescription(result.description);
+                    // Social posts
                     if (result?.social_links?.length) {
                         setSocialPosts(result.social_links.map((p) => ({ ...p, active: true })));
                     }
-                    if (result?.about_company || result?.about_product) {
-                        const parts = [
-                            result.about_company ? `ABOUT THE COMPANY\n${result.about_company}` : '',
-                            result.about_product ? `ABOUT THE PRODUCT\n${result.about_product}` : '',
-                        ].filter(Boolean);
-                        setPendingKbText(parts.join('\n\n'));
+                    // Knowledge base content
+                    if (result?.about) {
+                        setPendingKbText(result.about);
                         const slugPart = (s) => String(s ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
                         const now = new Date();
                         const date = now.toISOString().slice(0, 10);
                         const time = now.toTimeString().slice(0, 5).replace(':', '-');
-                        setPendingKbName(`${slugPart(result.name?.company_name)}-${slugPart(result.name?.product_name)}-KB-${date}-${time}`);
+                        setPendingKbName(`${slugPart(result.name?.company_name)}-KB-${date}-${time}`);
+                    }
+                    // Shopify selected images
+                    if (result?.shopify_image_urls?.length) {
+                        setShopifyImageUrls(result.shopify_image_urls);
                     }
                 }}
             />
+
+            {/* ── Save progress modal ── */}
+            {saveProgress && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                    <div className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-800">
+                        <h3 className="text-base font-semibold text-gray-900 dark:text-slate-100">
+                            Creating QR Company
+                        </h3>
+
+                        <div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 dark:border-amber-800/40 dark:bg-amber-900/20">
+                            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+                            <p className="text-xs text-amber-700 dark:text-amber-300">
+                                Do not refresh the page — please wait until all steps complete.
+                            </p>
+                        </div>
+
+                        <ul className="mt-5 space-y-3">
+                            {saveProgress.steps.map((step) => (
+                                <li key={step.id} className="flex items-center gap-3">
+                                    {step.status === 'active'  && <Loader2 className="h-4 w-4 shrink-0 animate-spin text-indigo-500" />}
+                                    {step.status === 'done'    && <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />}
+                                    {step.status === 'error'   && <XCircle className="h-4 w-4 shrink-0 text-red-500" />}
+                                    {step.status === 'pending' && <span className="h-4 w-4 shrink-0 rounded-full border-2 border-gray-300 dark:border-slate-600" />}
+                                    <span className={`text-sm ${
+                                        step.status === 'active'  ? 'font-medium text-gray-900 dark:text-slate-100' :
+                                        step.status === 'done'    ? 'text-emerald-700 dark:text-emerald-400' :
+                                        step.status === 'error'   ? 'text-red-600 dark:text-red-400' :
+                                        'text-gray-400 dark:text-slate-500'
+                                    }`}>
+                                        {step.status === 'done' ? step.label.replace('…', ' ✓') : step.label}
+                                    </span>
+                                </li>
+                            ))}
+                        </ul>
+
+                        {!saveProgress.error && saveProgress.steps.every((s) => s.status === 'done') && (
+                            <p className="mt-4 flex items-center gap-2 text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                                <CheckCircle2 className="h-4 w-4" />
+                                All done — redirecting…
+                            </p>
+                        )}
+
+                        {saveProgress.error && (
+                            <div className="mt-4 space-y-3">
+                                <p className="text-sm text-red-600 dark:text-red-400">{saveProgress.error}</p>
+                                <button
+                                    type="button"
+                                    onClick={() => setSaveProgress(null)}
+                                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
+                                >
+                                    Dismiss
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
         </AuthenticatedLayout>
     );
 }

@@ -152,7 +152,7 @@ function RetailersCard({ retailers }) {
         <div className="rounded-2xl border border-gray-200 bg-white/95 p-6 shadow-sm backdrop-blur-sm">
             <div className="mb-4 flex items-center gap-2">
                 <ShoppingBag className="h-4 w-4 text-[#b59100]" />
-                <h3 className="barlow-condensed-semibold text-base font-bold leading-tight text-gray-900">Where to Buy</h3>
+                <h3 className="barlow-condensed-semibold text-2xl font-bold leading-tight text-gray-900">Where to Buy</h3>
             </div>
             <ul className="space-y-3">
                 {retailers.map((retailer, i) => {
@@ -200,9 +200,9 @@ function ConciergeCta({ productName, onAskQuestion, onPickMode }) {
                     <Sparkles className="h-4 w-4" />
                 </span>
                 <div className="min-w-0 flex-1">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#b59100]/80">
-                        AI Concierge
-                    </p>
+                    {/* <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#b59100]/80">
+                        Connect with Allison
+                    </p> */}
                     <h3 className="barlow-condensed-semibold mt-0 text-xl font-bold leading-tight text-gray-900 sm:text-2xl">
                         Know more about <span className="text-[#b59100]">{productName}</span>
                     </h3>
@@ -353,7 +353,7 @@ function SocialPostsGallery({ posts }) {
             <div className="flex items-center justify-between px-5 pt-5 pb-3">
                 <div className="flex items-center gap-2">
                     <Share2 className="h-4 w-4 text-[#b59100]" />
-                    <h3 className="barlow-condensed-semibold text-base font-bold leading-tight text-gray-900">Our Socials</h3>
+                    <h3 className="barlow-condensed-semibold text-2xl font-bold leading-tight text-gray-900">Our Socials</h3>
                 </div>
                 {total > 1 && <span className="text-xs text-gray-400">{active + 1} / {total}</span>}
             </div>
@@ -459,7 +459,7 @@ function AboutConciergeCard({ product }) {
                     >
                         <div className="mb-4 flex items-center gap-2">
                             <BookOpen className="h-4 w-4 text-[#b59100]" />
-                            <h2 className="barlow-condensed-semibold text-base font-bold leading-tight text-gray-900">About</h2>
+                            <h2 className="barlow-condensed-semibold font-bold leading-tight text-gray-900 text-2xl">About</h2>
                         </div>
                         {product.product_description ? (
                             <div
@@ -475,7 +475,7 @@ function AboutConciergeCard({ product }) {
                             className="mt-5 inline-flex items-center gap-2 rounded-full border border-[#b59100]/40 bg-[#fffbe6] px-4 py-2 text-sm font-medium text-[#8a6d00] transition hover:bg-[#fff3b0] hover:border-[#b59100]"
                         >
                             <MessageCircle className="h-4 w-4" />
-                            Know more — ask a question
+                            Want to know more? Ask a question
                         </button>
                     </motion.div>
                 ) : (
@@ -587,6 +587,11 @@ export default function ProductEnquiryShowV2({ slug, product }) {
 
     // When opening the chat, smoothly scroll it into view
     const chatRef = useRef(null);
+    const activeThumbRef = useRef(null);
+
+    useEffect(() => {
+        activeThumbRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    }, [activeIndex]);
     useEffect(() => {
         if (chatOpen && chatRef.current) {
             setTimeout(() => chatRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 120);
@@ -639,6 +644,7 @@ export default function ProductEnquiryShowV2({ slug, product }) {
                                     {mediaItems.map((item, i) => (
                                         <button
                                             key={`${item.type}-${i}`}
+                                            ref={i === activeIndex ? activeThumbRef : null}
                                             type="button"
                                             onClick={() => setActiveIndex(i)}
                                             className={`relative shrink-0 overflow-hidden rounded-xl border-2 transition focus:outline-none focus:ring-2 focus:ring-[#ffde59] focus:ring-offset-2 focus:ring-offset-white ${

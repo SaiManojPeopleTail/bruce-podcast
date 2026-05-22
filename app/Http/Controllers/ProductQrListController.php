@@ -155,7 +155,8 @@ class ProductQrListController extends Controller
 
         try {
             $path = $this->urlToS3Path($url);
-            if ($path === '') {
+            // Only attempt signed URL for our own S3 assets (stored under ads/)
+            if ($path === '' || ! str_starts_with($path, 'ads/')) {
                 return $url;
             }
 
@@ -225,6 +226,25 @@ class ProductQrListController extends Controller
         foreach ($request->file('images', []) as $image) {
             $path = $image->store("ads/{$slug}", $this->disk());
             $imageUrls[] = Storage::disk($this->disk())->url($path);
+        }
+        // Shopify CDN URLs — fetch and re-upload to S3
+        $shopifyUrls = $request->input('shopify_image_urls', []);
+        if (! empty($shopifyUrls)) {
+            set_time_limit(max(300, ini_get('max_execution_time')));
+        }
+        foreach ($shopifyUrls as $cdnUrl) {
+            if (! filter_var($cdnUrl, FILTER_VALIDATE_URL)) continue;
+            try {
+                $res = Http::timeout(15)->get($cdnUrl);
+                if (! $res->successful()) continue;
+                $ext = strtolower(pathinfo(parse_url($cdnUrl, PHP_URL_PATH), PATHINFO_EXTENSION)) ?: 'jpg';
+                $ext = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp']) ? $ext : 'jpg';
+                $path = "ads/{$slug}/shopify_" . Str::random(10) . ".{$ext}";
+                Storage::disk($this->disk())->put($path, $res->body());
+                $imageUrls[] = Storage::disk($this->disk())->url($path);
+            } catch (\Throwable $e) {
+                Log::warning("Shopify image upload failed: {$cdnUrl} — {$e->getMessage()}");
+            }
         }
 
         $videoUrl = null;
@@ -363,11 +383,31 @@ class ProductQrListController extends Controller
         }
 
         foreach ($request->file('images', []) as $image) {
-            if (count($imageUrls) >= 5) {
+            if (count($imageUrls) >= 20) {
                 break;
             }
             $path = $image->store("ads/{$newSlug}", $this->disk());
             $imageUrls[] = Storage::disk($this->disk())->url($path);
+        }
+        // Shopify CDN URLs — fetch and re-upload to S3
+        $shopifyUrls = $request->input('shopify_image_urls', []);
+        if (! empty($shopifyUrls)) {
+            set_time_limit(max(300, ini_get('max_execution_time')));
+        }
+        foreach ($shopifyUrls as $cdnUrl) {
+            if (count($imageUrls) >= 20) break;
+            if (! filter_var($cdnUrl, FILTER_VALIDATE_URL)) continue;
+            try {
+                $res = Http::timeout(15)->get($cdnUrl);
+                if (! $res->successful()) continue;
+                $ext = strtolower(pathinfo(parse_url($cdnUrl, PHP_URL_PATH), PATHINFO_EXTENSION)) ?: 'jpg';
+                $ext = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp']) ? $ext : 'jpg';
+                $path = "ads/{$newSlug}/shopify_" . Str::random(10) . ".{$ext}";
+                Storage::disk($this->disk())->put($path, $res->body());
+                $imageUrls[] = Storage::disk($this->disk())->url($path);
+            } catch (\Throwable $e) {
+                Log::warning("Shopify image upload failed: {$cdnUrl} — {$e->getMessage()}");
+            }
         }
 
         if ($request->hasFile('video')) {
@@ -411,7 +451,7 @@ class ProductQrListController extends Controller
             'retailers' => ! empty($retailers) ? $retailers : null,
         ]);
 
-        return redirect()->route('product-qr-lists.index')->with('success', 'QR Company updated.');
+        return redirect()->route('product-qr-lists.edit', $productQrList)->with('success', 'QR Company updated.');
     }
 
     public function destroy(ProductQrList $productQrList)
@@ -421,6 +461,13 @@ class ProductQrListController extends Controller
         $productQrList->delete();
 
         return redirect()->route('product-qr-lists.index')->with('success', 'QR Company deleted.');
+    }
+
+    public function toggleActive(ProductQrList $productQrList): JsonResponse
+    {
+        $productQrList->update(['is_active' => ! $productQrList->is_active]);
+
+        return response()->json(['is_active' => $productQrList->is_active]);
     }
 
     public function checkSlug(Request $request): JsonResponse

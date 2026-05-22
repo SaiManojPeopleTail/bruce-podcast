@@ -1,7 +1,7 @@
 import { useConversation } from '@11labs/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { CheckCircle, ChevronLeft, ClipboardList, MessageSquare, Mic, Phone, PhoneOff, Send, Sparkles, X } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -46,7 +46,7 @@ function buildSessionOverrides(systemPrompt, product, textOnly) {
     };
 
     const firstMessage = product.first_message?.trim()
-        || `Hello! I'm The Concierge. How can I help you with ${product.product_name} today?`;
+        || `Hello! I'm Allison. What question do you have about ${product.product_name} ?`;
 
     return {
         agent: {
@@ -146,14 +146,25 @@ function buildSystemPrompt(product, textMode = false) {
         ``,
         `---`,
         ``,
-    ] : [];
+    ] : [
+        `## VOICE MODE — RESPONSE LENGTH RULES. YOU MUST FOLLOW THESE IN EVERY REPLY:`,
+        ``,
+        `1. Keep every response to 1-3 short spoken sentences maximum. Never more.`,
+        `2. Never use lists, bullet points, markdown, headers, or special characters — they sound terrible when spoken aloud.`,
+        `3. Speak naturally and conversationally — like a knowledgeable friend, not a brochure.`,
+        `4. If the user needs a lot of information, break it into a short answer and then ask a follow-up question to continue the conversation.`,
+        `5. Never read out URLs, email addresses, or phone numbers unless the user explicitly asks for them.`,
+        ``,
+        `---`,
+        ``,
+    ];
 
     const retailersBlock = buildRetailersBlock(product.retailers, textMode);
 
     return [
         ...formattingBlock,
-        `You are "The Concierge", a knowledgeable and warm AI assistant representing ${product.product_name}.`,
-        description ? `About the brand: ${description}` : null,
+        `You are helpful educational assistant, a knowledgeable and warm AI assistant. You dont work for a company, so dont mention that you work for a company or do not talk in first person. Always talk in third person about the company and products. Brand Name: ${product.product_name}.`,
+        description ? ` About the brand: ${description}` : null,
         ...retailersBlock,
         ``,
         `Your role is to:`,
@@ -300,7 +311,7 @@ function ChatBubble({ role, text, streaming = false }) {
 const inputCls =
     'block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#b59100] focus:outline-none focus:ring-1 focus:ring-[#b59100]/40';
 
-function EnquiryFormOverlay({ formData, onChange, onSubmit, onClose, submitting, submitted, errors }) {
+const EnquiryFormOverlay = forwardRef(function EnquiryFormOverlay({ formData, onChange, onSubmit, onClose, submitting, submitted, errors }, ref) {
     const phoneDisplay = formatNationalForDisplay(digitsUsNational(formData.phone));
 
     const handlePhoneChange = (e) => {
@@ -310,6 +321,7 @@ function EnquiryFormOverlay({ formData, onChange, onSubmit, onClose, submitting,
 
     return (
         <motion.div
+            ref={ref}
             key="form-overlay"
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
@@ -423,7 +435,7 @@ function EnquiryFormOverlay({ formData, onChange, onSubmit, onClose, submitting,
             </div>
         </motion.div>
     );
-}
+});
 
 function ModeCard({ icon: Icon, label, description, onClick }) {
     return (
@@ -506,6 +518,7 @@ export default function AiConcierge({ product, autoStart = null, initialUserMess
     // onMessage fires for BOTH voice and text mode.
     // SDK shape: { source: 'user' | 'ai', message: string }
     const onMessage = useCallback((event) => {
+        console.log('[AiConcierge] onMessage', event);
         const source  = event?.source ?? event?.role ?? '';
         const message = event?.message ?? '';
         if (!message?.trim()) return;
@@ -545,6 +558,7 @@ export default function AiConcierge({ product, autoStart = null, initialUserMess
     // agent_chat_response_part is streamed in text-only mode.
     // Confirmed payload shape: { type: 'agent_chat_response_part', agent_chat_response_part_event: { text_chunk: string } }
     const onDebug = useCallback((event) => {
+
         if (!isTextMode.current) return;
         if (event?.type !== 'agent_chat_response_part') return;
 
@@ -557,8 +571,11 @@ export default function AiConcierge({ product, autoStart = null, initialUserMess
 
     const { status, isSpeaking, startSession, endSession, sendUserMessage } = useConversation({
         onMessage,
-        onDebug,
         onConnect: () => console.log('[AiConcierge] connected'),
+        onDebug,
+        agent_chat_response_part: (event) => {
+            console.log('[AiConcierge] agent_chat_response_part', event);
+        },
         onDisconnect: (details) => {
             console.log('[AiConcierge] disconnected', details);
             clearStreaming();
@@ -816,7 +833,7 @@ export default function AiConcierge({ product, autoStart = null, initialUserMess
                         </span>
                         <div>
                             <h2 className="barlow-condensed-semibold text-base font-bold text-gray-900 leading-tight">
-                                AI Concierge
+                                Connect with Allison
                             </h2>
                         </div>
                     </div>

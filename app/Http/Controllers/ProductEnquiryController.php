@@ -48,16 +48,13 @@ class ProductEnquiryController extends Controller
         }
     }
 
-    public function show(string $slug)
+    private function renderProduct(ProductQrList $product, bool $isPreview = false)
     {
-        $product = ProductQrList::query()->where('slug', $slug)->firstOrFail();
-
         $images = $product->product_images ?? [];
         $signedImages = array_values(array_map(
             fn ($u) => $this->temporaryUrlForStorageUrl((string) $u) ?? (string) $u,
             $images
         ));
-
         $signedVideo = $product->video_url
             ? ($this->temporaryUrlForStorageUrl($product->video_url) ?? $product->video_url)
             : null;
@@ -67,8 +64,9 @@ class ProductEnquiryController extends Controller
             : 'ProductEnquiry/Show';
 
         return Inertia::render($design, [
-            'slug' => $slug,
-            'product' => [
+            'slug'       => $product->slug,
+            'is_preview' => $isPreview,
+            'product'    => [
                 'id'                    => $product->id,
                 'slug'                  => $product->slug,
                 'product_name'          => $product->product_name,
@@ -87,6 +85,24 @@ class ProductEnquiryController extends Controller
                 )),
             ],
         ]);
+    }
+
+    public function show(string $slug)
+    {
+        $product = ProductQrList::query()->where('slug', $slug)->where('is_active', true)->firstOrFail();
+
+        return $this->renderProduct($product);
+    }
+
+    /**
+     * Draft preview — active status ignored.
+     * Not linked from anywhere public and excluded from robots.txt.
+     */
+    public function preview(string $slug)
+    {
+        $product = ProductQrList::query()->where('slug', $slug)->firstOrFail();
+
+        return $this->renderProduct($product, isPreview: true);
     }
 
     public function store(Request $request, string $slug)
