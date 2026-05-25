@@ -11,6 +11,45 @@ use Inertia\Inertia;
 
 class EpisodeController extends Controller
 {
+    public function latestEpisodes()
+    {
+        $episodes = Episode::orderByDesc('created_at')
+            ->limit(4)
+            ->get(['id', 'title', 'slug', 'short_description', 'bunny_video_id', 'bunny_library_id', 'created_at']);
+
+        $data = $episodes->map(function (Episode $episode) {
+            $libraryId = $episode->bunny_library_id;
+            $videoId   = $episode->bunny_video_id;
+
+            $embedUrl  = ($libraryId && $videoId)
+                ? "https://iframe.mediadelivery.net/embed/{$libraryId}/{$videoId}?autoplay=false&loop=false&muted=false&preload=true&responsive=true"
+                : null;
+
+            $iframeHtml = $embedUrl
+                ? '<div style="position:relative;padding-top:56.25%;">'
+                  . '<iframe src="' . e($embedUrl) . '" '
+                  . 'loading="lazy" style="border:0;position:absolute;top:0;left:0;height:100%;width:100%;" '
+                  . 'allow="accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture;" '
+                  . 'allowfullscreen></iframe></div>'
+                : null;
+
+            return [
+                'id'                => $episode->id,
+                'title'             => $episode->title,
+                'slug'              => $episode->slug,
+                'short_description' => $episode->short_description,
+                'thumbnail_url'     => $episode->thumbnail_url,
+                'embed_url'         => $embedUrl,
+                'iframe_html'       => $iframeHtml,
+                'published_at'      => $episode->created_at?->toIso8601String(),
+            ];
+        });
+
+        return response()->json([
+            'data' => $data,
+        ])->header('Access-Control-Allow-Origin', '*');
+    }
+
     public function index(Request $request)
     {
         $query = Episode::withoutGlobalScope('published')->orderByDesc('created_at');

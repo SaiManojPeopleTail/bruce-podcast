@@ -66,6 +66,9 @@ Route::post('/api/ai-concierge/enquiry/{slug}', [\App\Http\Controllers\AiConcier
 
 Route::get('/', [WelcomeController::class, 'index'])->name('welcome');
 Route::get('/api/videos/more', [WelcomeController::class, 'videosMore'])->name('api.videos.more');
+Route::get('/api/episodes/latest', [\App\Http\Controllers\EpisodeController::class, 'latestEpisodes'])
+    ->middleware('throttle:60,1')
+    ->name('api.episodes.latest');
 Route::get('/meet-bruce', [WelcomeController::class, 'meetBruce'])->name('meet-bruce');
 Route::redirect('/about', '/meet-bruce', 301);
 Route::get('/brand-partnerships', [WelcomeController::class, 'brandPartnerships'])->name('brand-partnerships');
