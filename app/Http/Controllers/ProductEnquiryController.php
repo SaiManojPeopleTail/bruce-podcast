@@ -99,7 +99,7 @@ class ProductEnquiryController extends Controller
         if ($ogImage) {
             Meta::addMeta('twitter:image', $ogImage);
         }
-        Meta::setCanonical($canonical);
+        // Meta::setCanonical($canonical);
 
         // Organization + BreadcrumbList structured data
         $orgData = [

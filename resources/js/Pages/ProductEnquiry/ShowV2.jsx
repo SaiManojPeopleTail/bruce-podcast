@@ -502,7 +502,6 @@ export default function ProductEnquiryShowV2({ slug, product }) {
     const images = product.signed_product_images ?? [];
     const videoUrl = product.signed_video_url ?? null;
 
-    const canonicalPath = `/company/${product.slug}`;
 
     const mediaItems = useMemo(
         () => (images || []).map((src) => ({ type: isVideoUrl(src) ? 'video' : 'image', src })),
@@ -617,7 +616,6 @@ export default function ProductEnquiryShowV2({ slug, product }) {
                         <li itemProp="itemListElement" itemScope itemType="https://schema.org/ListItem">
                             <span className="text-gray-700" itemProp="name">{product.product_name}</span>
                             <meta itemProp="position" content="2" />
-                            <meta itemProp="item" content={canonicalUrl} />
                         </li>
                     </ol>
                 </nav>
