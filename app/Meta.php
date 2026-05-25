@@ -116,8 +116,13 @@ class Meta
                 $html[] = '<script type="application/ld+json">' . "\n" . $content . "\n" . '</script>';
                 continue;
             }
-            if (str_starts_with($name, 'og:')) {
+            if (str_starts_with($name, 'og:') || str_starts_with($name, 'twitter:')) {
                 $html[] = '<meta property="' . e($name) . '" content="' . e($content) . '">';
+                continue;
+            }
+            if (str_starts_with($name, 'link:')) {
+                $rel = e(substr($name, 5));
+                $html[] = '<link rel="' . $rel . '" href="' . e($content) . '">';
                 continue;
             }
             $html[] = '<meta name="' . e($name) . '" content="' . e($content) . '">';

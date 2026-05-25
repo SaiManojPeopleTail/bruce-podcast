@@ -171,6 +171,7 @@ export default function ProductContentExtractorModal({ show, onClose, onApply })
 
     const runExtraction = async () => {
         if (running || !companyUrl.trim()) return;
+        if (companyUrl.trim().startsWith('http://')) return;
 
         // Trigger Shopify detection in parallel if not already done
         if (shopifyStatus === null) {
@@ -297,11 +298,27 @@ export default function ProductContentExtractorModal({ show, onClose, onApply })
                             <input
                                 type="url"
                                 value={companyUrl}
-                                onChange={(e) => { setCompanyUrl(e.target.value); setShopifyStatus(null); setShopifyImages([]); setSelectedImages(new Set()); }}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    setCompanyUrl(val);
+                                    setShopifyStatus(null);
+                                    setShopifyImages([]);
+                                    setSelectedImages(new Set());
+                                }}
                                 onBlur={(e) => detectShopify(e.target.value)}
                                 placeholder="https://company.com/products/product-name"
-                                className="mt-1 block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-[#b59100] focus:ring-[#b59100] dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+                                className={`mt-1 block w-full rounded-md text-sm shadow-sm focus:border-[#b59100] focus:ring-[#b59100] dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 ${
+                                    companyUrl.trim().startsWith('http://')
+                                        ? 'border-red-400 focus:border-red-400 focus:ring-red-400'
+                                        : 'border-gray-300'
+                                }`}
                             />
+                            {companyUrl.trim().startsWith('http://') && (
+                                <p className="mt-1.5 flex items-center gap-1.5 text-xs text-red-600 dark:text-red-400">
+                                    <span>⚠️</span>
+                                    Please use a <strong>https://</strong> link — http:// is not supported.
+                                </p>
+                            )}
                             {/* Shopify status badge */}
                             {shopifyStatus === 'checking' && (
                                 <p className="mt-1.5 flex items-center gap-1.5 text-xs text-gray-400">
@@ -356,7 +373,7 @@ export default function ProductContentExtractorModal({ show, onClose, onApply })
                         <button
                             type="button"
                             onClick={runExtraction}
-                            disabled={running || !companyUrl.trim()}
+                            disabled={running || !companyUrl.trim() || companyUrl.trim().startsWith('http://')}
                             className="inline-flex items-center gap-2 rounded-lg bg-[#b59100] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#9a7c00] disabled:cursor-not-allowed disabled:opacity-60"
                         >
                             {running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}

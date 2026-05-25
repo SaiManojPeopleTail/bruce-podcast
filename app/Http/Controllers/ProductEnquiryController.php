@@ -99,7 +99,7 @@ class ProductEnquiryController extends Controller
         if ($ogImage) {
             Meta::addMeta('twitter:image', $ogImage);
         }
-        // Meta::setCanonical($canonical);
+        Meta::addMeta('link:canonical', $canonical);
 
         // Organization + BreadcrumbList structured data
         $orgData = [
@@ -122,7 +122,7 @@ class ProductEnquiryController extends Controller
                 [
                     '@type'           => 'BreadcrumbList',
                     'itemListElement' => [
-                        ['@type' => 'ListItem', 'position' => 1, 'name' => 'Home',                       'item' => rtrim(config('app.url'), '/')],
+                        ['@type' => 'ListItem', 'position' => 1, 'name' => 'Home', 'item' => rtrim(config('app.url'), '/')],
                         ['@type' => 'ListItem', 'position' => 2, 'name' => $product->product_name, 'item' => $canonical],
                     ],
                 ],

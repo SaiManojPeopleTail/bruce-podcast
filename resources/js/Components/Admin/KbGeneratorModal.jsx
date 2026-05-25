@@ -53,7 +53,7 @@ export default function KbGeneratorModal({ show, onClose, onApply }) {
     };
 
     const runGeneration = async () => {
-        if (running || !url.trim()) return;
+        if (running || !url.trim() || url.trim().startsWith('http://')) return;
         reset();
         setRunning(true);
 
@@ -166,8 +166,18 @@ export default function KbGeneratorModal({ show, onClose, onApply }) {
                         onKeyDown={(e) => e.key === 'Enter' && runGeneration()}
                         placeholder="https://company.com"
                         disabled={running}
-                        className="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-[#b59100] focus:ring-[#b59100] disabled:opacity-60 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+                        className={`block w-full rounded-md text-sm shadow-sm focus:border-[#b59100] focus:ring-[#b59100] disabled:opacity-60 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 ${
+                            url.trim().startsWith('http://')
+                                ? 'border-red-400 focus:border-red-400 focus:ring-red-400'
+                                : 'border-gray-300'
+                        }`}
                     />
+                    {url.trim().startsWith('http://') && (
+                        <p className="mt-1.5 flex items-center gap-1.5 text-xs text-red-600 dark:text-red-400">
+                            <span>⚠️</span>
+                            Please use a <strong>https://</strong> link — http:// is not supported.
+                        </p>
+                    )}
                     {shopifyStatus === 'checking' && (
                         <p className="mt-1.5 flex items-center gap-1.5 text-xs text-gray-400">
                             <Loader2 className="h-3 w-3 animate-spin" />
@@ -191,7 +201,7 @@ export default function KbGeneratorModal({ show, onClose, onApply }) {
                 <button
                     type="button"
                     onClick={runGeneration}
-                    disabled={running || !url.trim()}
+                    disabled={running || !url.trim() || url.trim().startsWith('http://')}
                     className="inline-flex items-center gap-2 rounded-lg bg-[#b59100] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#9a7c00] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                     {running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
