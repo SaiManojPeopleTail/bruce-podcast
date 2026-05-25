@@ -360,18 +360,40 @@ function SocialPostsGallery({ posts }) {
 
             {/* Carousel track */}
             <div
-                className="relative pt-6 pb-14"
+                className="relative py-6"
                 onTouchStart={onTouchStart}
                 onTouchEnd={onTouchEnd}
             >
+                {/* Left arrow */}
+                {total > 1 && (
+                    <button
+                        type="button"
+                        onClick={prev}
+                        aria-label="Previous"
+                        className="absolute left-2 top-1/2 z-20 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-white shadow-md border border-gray-100 transition hover:bg-gray-50 active:scale-95 focus:outline-none"
+                    >
+                        <ChevronLeft className="h-4 w-4 text-gray-700" />
+                    </button>
+                )}
+
+                {/* Right arrow */}
+                {total > 1 && (
+                    <button
+                        type="button"
+                        onClick={next}
+                        aria-label="Next"
+                        className="absolute right-2 top-1/2 z-20 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-white shadow-md border border-gray-100 transition hover:bg-gray-50 active:scale-95 focus:outline-none"
+                    >
+                        <ChevronRight className="h-4 w-4 text-gray-700" />
+                    </button>
+                )}
+
                 {/* Overflow clip wrapper — clips side peek but not vertical */}
                 <div className="overflow-hidden">
-                    {/* Slide strip: each slide is CENTER_W% wide, offset by PEEK_W% so center is centred */}
+                    {/* Slide strip */}
                     <div
                         className="flex items-center transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]"
                         style={{
-                            // shift by peek so first card starts offset to show peek
-                            // GAP_PX must match the marginRight on each slide below
                             transform: `translateX(calc(${PEEK_W}% - ${active * CENTER_W}% + ${active * 30}px))`,
                             paddingLeft: 0,
                         }}
@@ -385,14 +407,14 @@ function SocialPostsGallery({ posts }) {
                                     className="flex-shrink-0 transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]"
                                     style={{
                                         width: `${CENTER_W}%`,
-                                        // Negative margin pulls side card closer; must match +Npx in translateX above
                                         marginRight: -30,
                                         opacity: isCenter ? 1 : 0.4,
                                         cursor: isCenter ? 'default' : 'pointer',
                                         pointerEvents: isCenter ? 'auto' : 'none',
                                     }}
                                 >
-                                    <div className={`rounded-2xl overflow-hidden border transition-all duration-500 max-h-[430px] md:max-h-[645px] ${isCenter ? 'border-gray-200 shadow-lg' : 'border-gray-100 shadow-sm scale-[0.75]'}`}>                                        {post.platform === 'linkedin'
+                                    <div className={`rounded-2xl overflow-hidden border transition-all duration-500 max-h-[430px] md:max-h-[645px] ${isCenter ? 'border-gray-200 shadow-lg' : 'border-gray-100 shadow-sm scale-[0.75]'}`}>
+                                        {post.platform === 'linkedin'
                                             ? <LinkedInCard post={post} />
                                             : <InstagramEmbed post={post} />
                                         }
@@ -403,27 +425,14 @@ function SocialPostsGallery({ posts }) {
                     </div>
                 </div>
 
-                {/* Arrows — sit at bottom-center of carousel, overlapping the card slightly */}
+                {/* Dot indicators — below the carousel */}
                 {total > 1 && (
-                    <div className="absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 items-center gap-3">
-                        <button type="button" onClick={prev} aria-label="Previous"
-                            className="flex h-9 w-9 items-center justify-center rounded-full bg-white shadow-md border border-gray-100 transition hover:bg-gray-50 active:scale-95 focus:outline-none">
-                            <ChevronLeft className="h-4 w-4 text-gray-700" />
-                        </button>
-
-                        {/* Dot indicators inline with arrows */}
-                        <div className="flex items-center gap-1.5">
-                            {activePosts.map((_, i) => (
-                                <button key={i} type="button" onClick={() => setActive(i)} aria-label={`Post ${i + 1}`}
-                                    className={`rounded-full transition-all duration-300 ${i === active ? 'h-2 w-5 bg-gray-600' : 'h-2 w-2 bg-gray-300 hover:bg-gray-400'}`}
-                                />
-                            ))}
-                        </div>
-
-                        <button type="button" onClick={next} aria-label="Next"
-                            className="flex h-9 w-9 items-center justify-center rounded-full bg-white shadow-md border border-gray-100 transition hover:bg-gray-50 active:scale-95 focus:outline-none">
-                            <ChevronRight className="h-4 w-4 text-gray-700" />
-                        </button>
+                    <div className="mt-4 flex justify-center items-center gap-1.5">
+                        {activePosts.map((_, i) => (
+                            <button key={i} type="button" onClick={() => setActive(i)} aria-label={`Post ${i + 1}`}
+                                className={`rounded-full transition-all duration-300 ${i === active ? 'h-2 w-5 bg-gray-600' : 'h-2 w-2 bg-gray-300 hover:bg-gray-400'}`}
+                            />
+                        ))}
                     </div>
                 )}
             </div>
