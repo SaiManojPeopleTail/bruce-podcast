@@ -91,7 +91,7 @@ export default function Create() {
     useEffect(() => () => { mediaObjectUrlsRef.current.forEach(URL.revokeObjectURL); }, []);
 
     const qrUrl = slug
-        ? `${window.location.origin}/product/${slug}`
+        ? `${window.location.origin}/company/${slug}`
         : '';
 
     const checkSlug = useCallback(async (rawSlug) => {

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Jobs\SendProductEnquiryNotificationJob;
+use App\Meta;
 use App\Models\ProductEnquiry;
 use App\Models\ProductQrList;
 use Illuminate\Http\Request;
@@ -48,6 +49,89 @@ class ProductEnquiryController extends Controller
         }
     }
 
+    private function stripHtml(string $html): string
+    {
+        return trim(preg_replace('/\s+/', ' ', strip_tags($html)));
+    }
+
+    private function truncate(string $text, int $max): string
+    {
+        if (mb_strlen($text) <= $max) {
+            return $text;
+        }
+        $slice = mb_substr($text, 0, $max);
+        $lastBreak = max(
+            mb_strrpos($slice, '. '),
+            mb_strrpos($slice, '! '),
+            mb_strrpos($slice, '? ')
+        );
+        return $lastBreak > $max * 0.6
+            ? mb_substr($slice, 0, (int) $lastBreak + 1)
+            : rtrim($slice) . '…';
+    }
+
+    private function buildSeoMeta(ProductQrList $product, array $signedImages): void
+    {
+        $appName     = config('app.name', 'Bruce W. Cole');
+        $plainDesc   = $this->stripHtml((string) ($product->product_description ?? ''));
+        $metaDesc    = $plainDesc !== ''
+            ? $this->truncate($plainDesc, 155)
+            : "Learn about {$product->product_name} — connect with our AI concierge for instant answers.";
+
+        $canonical   = rtrim(config('app.url'), '/') . '/company/' . $product->slug;
+        $ogImage     = $signedImages[0] ?? null;
+
+        $title = "{$product->product_name} - {$appName}";
+
+        Meta::addMeta('title', $title);
+        Meta::addMeta('description', $metaDesc);
+        Meta::addMeta('og:type', 'website');
+        Meta::addMeta('og:title', $title);
+        Meta::addMeta('og:description', $metaDesc);
+        Meta::addMeta('og:url', $canonical);
+        Meta::addMeta('og:site_name', $appName);
+        if ($ogImage) {
+            Meta::addMeta('og:image', $ogImage);
+        }
+        Meta::addMeta('twitter:card', $ogImage ? 'summary_large_image' : 'summary');
+        Meta::addMeta('twitter:title', $title);
+        Meta::addMeta('twitter:description', $metaDesc);
+        if ($ogImage) {
+            Meta::addMeta('twitter:image', $ogImage);
+        }
+        Meta::setCanonical($canonical);
+
+        // Organization + BreadcrumbList structured data
+        $orgData = [
+            '@type'  => 'Organization',
+            '@id'    => $canonical . '#organization',
+            'name'   => $product->product_name,
+            'url'    => $canonical,
+        ];
+        if ($plainDesc !== '') {
+            $orgData['description'] = $this->truncate($plainDesc, 300);
+        }
+        if ($ogImage) {
+            $orgData['image'] = $ogImage;
+        }
+
+        $jsonLd = json_encode([
+            '@context' => 'https://schema.org',
+            '@graph'   => [
+                $orgData,
+                [
+                    '@type'           => 'BreadcrumbList',
+                    'itemListElement' => [
+                        ['@type' => 'ListItem', 'position' => 1, 'name' => 'Home',                       'item' => rtrim(config('app.url'), '/')],
+                        ['@type' => 'ListItem', 'position' => 2, 'name' => $product->product_name, 'item' => $canonical],
+                    ],
+                ],
+            ],
+        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+
+        Meta::addMeta('json-ld:company-page', $jsonLd);
+    }
+
     private function renderProduct(ProductQrList $product, bool $isPreview = false)
     {
         $images = $product->product_images ?? [];
@@ -58,6 +142,10 @@ class ProductEnquiryController extends Controller
         $signedVideo = $product->video_url
             ? ($this->temporaryUrlForStorageUrl($product->video_url) ?? $product->video_url)
             : null;
+
+        if (! $isPreview) {
+            $this->buildSeoMeta($product, $signedImages);
+        }
 
         $design = config('features.product_enquiry_design', 'v1') === 'v2'
             ? 'ProductEnquiry/ShowV2'

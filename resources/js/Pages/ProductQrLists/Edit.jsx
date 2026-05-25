@@ -116,7 +116,7 @@ export default function Edit({ product }) {
     const [slug, setSlug] = useState(product.slug ?? '');
     const [slugStatus, setSlugStatus] = useState(() => (product.slug ? 'available' : 'empty'));
 
-    const qrUrl = slug ? `${window.location.origin}/product/${slug}` : '';
+    const qrUrl = slug ? `${window.location.origin}/company/${slug}` : '';
 
     const checkSlug = useCallback(
         async (rawSlug) => {

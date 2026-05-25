@@ -1,2 +1,2 @@
 User-agent: *
-Disallow: /product/*/preview
+Disallow: /company/*/preview

@@ -89,7 +89,7 @@ function ProductRow({ r, serialNo, onDeleteRequest, onQrRequest }) {
             <td className="whitespace-nowrap px-4 py-4 text-right">
                 <div className="flex justify-end gap-2">
                     <a
-                        href={active ? `/product/${r.slug}` : `/product/${r.slug}/preview`}
+                        href={active ? `/company/${r.slug}` : `/company/${r.slug}/preview`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium shadow-sm transition ${
@@ -145,7 +145,7 @@ function formatDate(iso) {
 
 function QrModal({ product, onClose }) {
     const qrRef = useRef(null);
-    const qrUrl = `${window.location.origin}/product/${product.slug}`;
+    const qrUrl = `${window.location.origin}/company/${product.slug}`;
 
     const handleDownload = () => {
         qrRef.current?.download({ name: product.slug, format: 'png', size: 512 });

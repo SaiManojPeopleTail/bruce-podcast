@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Clip;
 use App\Models\Episode;
+use App\Models\ProductQrList;
 use App\Models\SponsorVideo;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cache;
@@ -111,6 +112,20 @@ class SitemapController extends Controller
                 $base . '/sponsor-video/' . $video->slug,
                 $lastmod,
                 '0.8',
+                'weekly'
+            );
+        }
+
+        // Company pages (active only)
+        $companies = ProductQrList::where('is_active', true)
+            ->orderByDesc('updated_at')
+            ->get(['slug', 'updated_at', 'created_at']);
+        foreach ($companies as $company) {
+            $lastmod = ($company->updated_at ?? $company->created_at)?->toW3cString();
+            $urls[] = $this->urlNode(
+                $base . '/company/' . $company->slug,
+                $lastmod,
+                '0.7',
                 'weekly'
             );
         }

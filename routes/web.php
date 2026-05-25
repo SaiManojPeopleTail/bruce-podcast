@@ -122,16 +122,16 @@ Route::post('/newsletter/subscribe', [NewsletterController::class, 'subscribe'])
     ->middleware('throttle:10,1')
     ->name('newsletter.subscribe');
 
-Route::get('/product/{slug}', [ProductEnquiryController::class, 'show'])
+Route::get('/company/{slug}', [ProductEnquiryController::class, 'show'])
     ->name('product-enquiry.index')
     ->where('slug', '[a-z0-9]+(?:-[a-z0-9]+)*');
-Route::post('/product/{slug}', [ProductEnquiryController::class, 'store'])
+Route::post('/company/{slug}', [ProductEnquiryController::class, 'store'])
     ->middleware('throttle:10,1')
     ->name('product-enquiry.record-submission')
     ->where('slug', '[a-z0-9]+(?:-[a-z0-9]+)*');
 
 // Draft preview — excluded from robots.txt, not linked from anywhere public
-Route::get('/product/{slug}/preview', [ProductEnquiryController::class, 'preview'])
+Route::get('/company/{slug}/preview', [ProductEnquiryController::class, 'preview'])
     ->name('product-enquiry.preview');
 
 Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () {

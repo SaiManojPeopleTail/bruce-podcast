@@ -502,6 +502,8 @@ export default function ProductEnquiryShowV2({ slug, product }) {
     const images = product.signed_product_images ?? [];
     const videoUrl = product.signed_video_url ?? null;
 
+    const canonicalPath = `/company/${product.slug}`;
+
     const mediaItems = useMemo(
         () => (images || []).map((src) => ({ type: isVideoUrl(src) ? 'video' : 'image', src })),
         [images],
@@ -600,15 +602,24 @@ export default function ProductEnquiryShowV2({ slug, product }) {
 
     return (
         <HomeLayout>
-            <Head title={`${product.product_name}`} />
+            <Head title={product.product_name} />
 
             <div className="relative mx-auto mt-0 w-full max-w-7xl flex-1 px-4 py-12 sm:px-6 md:py-16 lg:px-8">
-                <nav className="mb-8 text-sm text-gray-500">
-                    <Link href={route('welcome')} className="font-medium text-[#b59100] hover:underline">
-                        Home
-                    </Link>
-                    <span className="mx-2 text-gray-400" aria-hidden>/</span>
-                    <span className="text-gray-700">Product enquiry</span>
+                <nav aria-label="Breadcrumb" className="mb-8 text-sm text-gray-500">
+                    <ol className="flex items-center gap-1" itemScope itemType="https://schema.org/BreadcrumbList">
+                        <li itemProp="itemListElement" itemScope itemType="https://schema.org/ListItem">
+                            <Link href={route('welcome')} className="font-medium text-[#b59100] hover:underline" itemProp="item">
+                                <span itemProp="name">Home</span>
+                            </Link>
+                            <meta itemProp="position" content="1" />
+                        </li>
+                        <li className="mx-2 text-gray-400" aria-hidden>/</li>
+                        <li itemProp="itemListElement" itemScope itemType="https://schema.org/ListItem">
+                            <span className="text-gray-700" itemProp="name">{product.product_name}</span>
+                            <meta itemProp="position" content="2" />
+                            <meta itemProp="item" content={canonicalUrl} />
+                        </li>
+                    </ol>
                 </nav>
 
                 {videoUrl && (
@@ -632,7 +643,7 @@ export default function ProductEnquiryShowV2({ slug, product }) {
 
                 <div className="grid gap-2 lg:grid-cols-2 lg:items-start lg:gap-4 xl:gap-6 [&>*:last-child]:overflow-x-hidden ">
                     {/* ── LEFT COLUMN: sticky — sized by content, right column scrolls past it ── */}
-                    <section className="rounded-2xl border border-gray-200 bg-white/95 p-6 shadow-sm backdrop-blur-sm sm:p-8 lg:sticky lg:top-24 lg:self-start">
+                    <section aria-label="Media gallery" className="rounded-2xl border border-gray-200 bg-white/95 p-6 shadow-sm backdrop-blur-sm sm:p-8 lg:sticky lg:top-24 lg:self-start">
                         <h1 className="barlow-condensed-semibold text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
                             {product.product_name}
                         </h1>
@@ -725,11 +736,11 @@ export default function ProductEnquiryShowV2({ slug, product }) {
                     </section>
 
                     {/* ── RIGHT COLUMN: About/Concierge flip card + Social Posts + Retailers ── */}
-                    <div className="flex flex-col gap-4 lg:gap-6">
+                    <section aria-label="Company details" className="flex flex-col gap-4 lg:gap-6">
                         <AboutConciergeCard product={product} />
                         <SocialPostsGallery posts={product.social_posts} />
                         <RetailersCard retailers={product.retailers} />
-                    </div>
+                    </section>
                 </div>
             </div>
 
