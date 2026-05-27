@@ -69,6 +69,9 @@ Route::get('/api/videos/more', [WelcomeController::class, 'videosMore'])->name('
 Route::get('/api/episodes/latest', [\App\Http\Controllers\EpisodeController::class, 'latestEpisodes'])
     ->middleware('throttle:60,1')
     ->name('api.episodes.latest');
+Route::get('/api/companies/latest', [\App\Http\Controllers\ProductQrListController::class, 'latestCompanies'])
+    ->middleware('throttle:60,1')
+    ->name('api.companies.latest');
 Route::get('/meet-bruce', [WelcomeController::class, 'meetBruce'])->name('meet-bruce');
 Route::redirect('/about', '/meet-bruce', 301);
 Route::get('/brand-partnerships', [WelcomeController::class, 'brandPartnerships'])->name('brand-partnerships');

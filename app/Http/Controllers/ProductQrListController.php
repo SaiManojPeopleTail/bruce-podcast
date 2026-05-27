@@ -170,6 +170,44 @@ class ProductQrListController extends Controller
         }
     }
 
+    public function latestCompanies(): JsonResponse
+    {
+        $companies = ProductQrList::where('is_active', true)
+            ->orderByDesc('updated_at')
+            ->limit(4)
+            ->get(['id', 'slug', 'product_name', 'product_description', 'product_images', 'updated_at', 'created_at']);
+
+        $appUrl = rtrim(config('app.url'), '/');
+
+        $data = $companies->map(function (ProductQrList $company) use ($appUrl) {
+            $images = $company->product_images ?? [];
+
+            $signedImages = array_values(array_map(
+                fn ($u) => $this->temporaryUrlForStorageUrl((string) $u) ?? (string) $u,
+                array_filter($images)
+            ));
+
+            $plain = trim(preg_replace('/\s+/', ' ', strip_tags((string) ($company->product_description ?? ''))));
+            $excerpt = mb_strlen($plain) > 160
+                ? rtrim(mb_substr($plain, 0, 157)) . '…'
+                : $plain;
+
+            return [
+                'id'          => $company->id,
+                'name'        => $company->product_name,
+                'slug'        => $company->slug,
+                'excerpt'     => $excerpt ?: null,
+                'image'       => $signedImages[0] ?? null,
+                'images'      => $signedImages,
+                'url'         => $appUrl . '/company/' . $company->slug,
+                'updated_at'  => $company->updated_at?->toIso8601String(),
+            ];
+        });
+
+        return response()->json(['data' => $data])
+            ->header('Access-Control-Allow-Origin', '*');
+    }
+
     public function index(Request $request)
     {
         $query = ProductQrList::query()->orderByDesc('created_at');
