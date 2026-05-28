@@ -13,7 +13,7 @@ export default function Footer() {
                 {/* Desktop Order: title section -> nav -> socials (default flex-row order) */}
                 <nav
                     className="
-                        order-2 flex flex-col gap-2 md:flex-row md:gap-6 
+                        order-2 flex flex-col gap-2 md:flex-row md:gap-6 max-w-xl flex-wrap justify-center  
                     "
                     aria-label="Footer navigation"
                 >
@@ -26,6 +26,9 @@ export default function Footer() {
                     <Link href={route('episodes-list')} className="text-sm font-medium text-gray-300 hover:text-[#ffde59] transition-colors">
                         Episodes
                     </Link>
+                    {/* <Link href={route('companies-list')} className="text-sm font-medium text-gray-300 hover:text-[#ffde59] transition-colors">
+                        Companies
+                    </Link> */}
                     <Link
                         href={route('merch.index')}
                         className="text-sm font-medium text-gray-300 hover:text-[#ffde59] transition-colors"

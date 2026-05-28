@@ -29,6 +29,7 @@ class SitemapController extends Controller
             'Allow: /episodes',
             'Allow: /episodes/clips',
             'Allow: /sponsor-videos',
+            'Allow: /companies',
             'Allow: /episode/',
             'Allow: /episodes/clip/',
             'Allow: /sponsor-video/',
@@ -74,6 +75,7 @@ class SitemapController extends Controller
             ['loc' => $base . '/episodes', 'priority' => '0.9', 'changefreq' => 'weekly'],
             ['loc' => $base . '/episodes/clips', 'priority' => '0.9', 'changefreq' => 'weekly'],
             ['loc' => $base . '/sponsor-videos', 'priority' => '0.9', 'changefreq' => 'weekly'],
+            ['loc' => $base . '/companies', 'priority' => '0.9', 'changefreq' => 'weekly'],
         ];
 
         foreach ($static as $entry) {

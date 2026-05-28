@@ -4,6 +4,7 @@ use App\Http\Controllers\BrandController;
 use App\Http\Controllers\BrandsViewController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\ClipController;
+use App\Http\Controllers\CompaniesViewController;
 use App\Http\Controllers\EpisodeController;
 use App\Http\Controllers\EpisodesViewController;
 use App\Http\Controllers\MerchController;
@@ -113,6 +114,7 @@ Route::get('/episodes/clips', [EpisodesViewController::class, 'clipsIndex'])->na
 Route::get('/episodes/clip/{slug}', [EpisodesViewController::class, 'clipShow'])->name('episode-clip-show');
 Route::get('/sponsor-videos', [EpisodesViewController::class, 'sponsorVideosIndex'])->name('sponsor-videos-list');
 Route::get('/sponsor-video/{slug}', [EpisodesViewController::class, 'sponsorVideoShow'])->name('sponsor-video-show');
+Route::get('/companies', [CompaniesViewController::class, 'index'])->name('companies-list');
 Route::get('/our-brands', [BrandsViewController::class, 'index'])->name('our-brands-list');
 Route::get('/our-brands/{brand}', [BrandsViewController::class, 'show'])->name('our-brands-show');
 
