@@ -26,9 +26,9 @@ export default function Footer() {
                     <Link href={route('episodes-list')} className="text-sm font-medium text-gray-300 hover:text-[#ffde59] transition-colors">
                         Episodes
                     </Link>
-                    {/* <Link href={route('companies-list')} className="text-sm font-medium text-gray-300 hover:text-[#ffde59] transition-colors">
-                        Companies
-                    </Link> */}
+                    <Link href={route('companies-list')} className="text-sm font-medium text-gray-300 hover:text-[#ffde59] transition-colors">
+                        Rise
+                    </Link>
                     <Link
                         href={route('merch.index')}
                         className="text-sm font-medium text-gray-300 hover:text-[#ffde59] transition-colors"
