@@ -6,6 +6,7 @@ import KnowledgeBaseCard from '@/Components/Admin/KnowledgeBaseCard';
 import ProductContentExtractorModal from '@/Components/Admin/ProductContentExtractorModal';
 import RetailersEditor, { resolveRetailerConflicts } from '@/Components/Admin/RetailersEditor';
 import SocialPostsManager from '@/Components/Admin/SocialPostsManager';
+import VideoThumbnailUpload from '@/Components/Admin/VideoThumbnailUpload';
 import RichTextEditor from '@/Components/RichTextEditor';
 import {
     buildMediaFormPayload,
@@ -84,6 +85,9 @@ export default function Edit({ product }) {
     const [pendingVideoDelete, setPendingVideoDelete] = useState(false);
     const [video, setVideo] = useState(null);
     const [videoName, setVideoName] = useState('');
+    const [videoThumbnail, setVideoThumbnail] = useState(null);
+    const existingVideoThumbnailUrl = product.video_thumbnail_url ?? null;
+    const [videoThumbnailRemovedPending, setVideoThumbnailRemovedPending] = useState(false);
     const [notificationEmail, setNotificationEmail] = useState(product.notification_email ?? '');
 
     const [socialPosts, setSocialPosts] = useState(() =>
@@ -108,7 +112,7 @@ export default function Edit({ product }) {
     const [slug, setSlug] = useState(product.slug ?? '');
     const [slugStatus, setSlugStatus] = useState(() => (product.slug ? 'available' : 'empty'));
 
-    const qrUrl = slug ? `${window.location.origin}/company/${slug}` : '';
+    const qrUrl = slug ? route('product-enquiry.index', { slug }) : '';
 
     const checkSlug = useCallback(
         async (rawSlug) => {
@@ -232,7 +236,7 @@ export default function Edit({ product }) {
         if (processing) return;
 
         if (!productName.trim()) {
-            setErrors({ product_name: 'Name is required.' });
+            setErrors({ product_name: 'Brand name is required.' });
             return;
         }
         if (!slug || slugStatus === 'checking') {
@@ -286,11 +290,16 @@ export default function Edit({ product }) {
         } else if (videoRemovedPending) {
             fd.append('remove_video', '1');
         }
+        if (videoThumbnail) {
+            fd.append('video_thumbnail', videoThumbnail);
+        } else if (videoThumbnailRemovedPending) {
+            fd.append('remove_video_thumbnail', '1');
+        }
 
         const hasKb = kbCardRef.current?.hasPendingContent() ?? false;
 
         const steps = [
-            { id: 'save', label: 'Saving company details…', status: 'active' },
+            { id: 'save', label: 'Saving brand…', status: 'active' },
             ...(hasKb ? [{ id: 'kb', label: 'Uploading knowledge base…', status: 'pending' }] : []),
         ];
         setSaveProgress({ steps, error: null });
@@ -348,11 +357,11 @@ export default function Edit({ product }) {
         <AuthenticatedLayout
             header={
                 <h2 className="text-xl font-semibold leading-tight text-gray-800 dark:text-slate-200">
-                    Edit QR Company
+                    Edit Rise Brand
                 </h2>
             }
         >
-            <Head title="Edit QR Company" />
+            <Head title="Edit Rise Brand" />
 
             <div className="w-full pb-24">
                 <form id="product-qr-form" onSubmit={handleSubmit}>
@@ -362,10 +371,10 @@ export default function Edit({ product }) {
                             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                 <div>
                                     <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-100">
-                                        Start manually or generate from product URL
+                                        Start manually or generate from brand URL
                                     </h3>
                                     <p className="mt-1 text-xs text-amber-800/80 dark:text-amber-200/80">
-                                        Automatic opens a temporary GPT web-search modal. Nothing is saved until you submit this product form.
+                                        Automatic opens a temporary GPT web-search modal. Nothing is saved until you submit this brand form.
                                     </p>
                                 </div>
                                 <div className="flex shrink-0 gap-2">
@@ -384,7 +393,7 @@ export default function Edit({ product }) {
                         <div className="grid grid-cols-[1fr_auto] items-start gap-5">
                             <div className="space-y-5">
                                 <div>
-                                    <InputLabel htmlFor="product_name" value="Name *" />
+                                    <InputLabel htmlFor="product_name" value="Brand name *" />
                                     <input
                                         id="product_name"
                                         type="text"
@@ -457,7 +466,7 @@ export default function Edit({ product }) {
                                 <RichTextEditor
                                     value={description}
                                     onChange={setDescription}
-                                    placeholder="Describe the company and its products — mission, product range, key benefits…"
+                                    placeholder="Describe the brand — mission, product range, key benefits…"
                                 />
                             </div>
                             <InputError message={errors.product_description} className="mt-1" />
@@ -482,10 +491,10 @@ export default function Edit({ product }) {
                             <InputError message={errors.notification_email} className="mt-1" />
                         </div>
 
-                        {/* Product Media (images + videos) */}
+                        {/* Brand media */}
                         <div>
                             <div className="mb-2 flex items-center justify-between">
-                                <InputLabel value={`Product Media (up to ${MAX_MEDIA})`} />
+                                <InputLabel value={`Brand media (up to ${MAX_MEDIA})`} />
                                 <span className="text-xs text-gray-500 dark:text-slate-400">
                                     {totalMedia} / {MAX_MEDIA}
                                 </span>
@@ -535,7 +544,7 @@ export default function Edit({ product }) {
 
                         {/* Video */}
                         <div>
-                            <InputLabel value="Product Video" />
+                            <InputLabel value="Brand video" />
 
                             {existingVideoUrl && !videoRemovedPending && !video ? (
                                 <div className="mt-1 space-y-3">
@@ -617,6 +626,25 @@ export default function Edit({ product }) {
                             <InputError message={errors.video} className="mt-1" />
                         </div>
 
+                        <VideoThumbnailUpload
+                            error={errors.video_thumbnail}
+                            existingPreviewUrl={
+                                videoThumbnailRemovedPending
+                                    ? null
+                                    : (product.signed_video_thumbnail_url ?? null)
+                            }
+                            removedPending={videoThumbnailRemovedPending}
+                            onFileChange={(file) => {
+                                setVideoThumbnail(file);
+                                if (file) setVideoThumbnailRemovedPending(false);
+                            }}
+                            onRemoveExisting={
+                                existingVideoThumbnailUrl
+                                    ? () => setVideoThumbnailRemovedPending(true)
+                                    : undefined
+                            }
+                        />
+
                     </div>{/* end left column card */}
 
                     {/* Right column — Retailers + Knowledge Base (sticky) */}
@@ -648,7 +676,7 @@ export default function Edit({ product }) {
                                         onChange={(e) => setFirstMessage(e.target.value)}
                                         rows={3}
                                         maxLength={1000}
-                                        placeholder="Override the agent's opening message for this product…"
+                                        placeholder="Override the agent's opening message for this brand…"
                                         className="mt-1 block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-slate-500 dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-400"
                                     />
                                     <InputError message={errors.first_message} className="mt-1" />
@@ -704,7 +732,7 @@ export default function Edit({ product }) {
                                 Saving…
                             </>
                         ) : (
-                            'Update QR Company'
+                            'Update brand'
                         )}
                     </button>
                 </div>
@@ -847,7 +875,7 @@ export default function Edit({ product }) {
                                         'text-gray-400 dark:text-slate-500'
                                     }`}>
                                         {step.status === 'done'
-                                            ? step.label.replace('…', ' ✓').replace('Saving company details…', 'Company details saved').replace('Uploading knowledge base…', 'Knowledge base uploaded')
+                                            ? step.label.replace('…', ' ✓').replace('Saving brand…', 'Brand saved').replace('Uploading knowledge base…', 'Knowledge base uploaded')
                                             : step.label}
                                     </span>
                                 </li>

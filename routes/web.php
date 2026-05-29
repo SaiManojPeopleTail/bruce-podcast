@@ -114,7 +114,7 @@ Route::get('/episodes/clips', [EpisodesViewController::class, 'clipsIndex'])->na
 Route::get('/episodes/clip/{slug}', [EpisodesViewController::class, 'clipShow'])->name('episode-clip-show');
 Route::get('/sponsor-videos', [EpisodesViewController::class, 'sponsorVideosIndex'])->name('sponsor-videos-list');
 Route::get('/sponsor-video/{slug}', [EpisodesViewController::class, 'sponsorVideoShow'])->name('sponsor-video-show');
-Route::get('/companies', [CompaniesViewController::class, 'index'])->name('companies-list');
+Route::get('/rise', [CompaniesViewController::class, 'index'])->name('companies-list');
 Route::get('/our-brands', [BrandsViewController::class, 'index'])->name('our-brands-list');
 Route::get('/our-brands/{brand}', [BrandsViewController::class, 'show'])->name('our-brands-show');
 
@@ -127,17 +127,22 @@ Route::post('/newsletter/subscribe', [NewsletterController::class, 'subscribe'])
     ->middleware('throttle:10,1')
     ->name('newsletter.subscribe');
 
-Route::get('/company/{slug}', [ProductEnquiryController::class, 'show'])
+Route::get('/rise/{slug}', [ProductEnquiryController::class, 'show'])
     ->name('product-enquiry.index')
     ->where('slug', '[a-z0-9]+(?:-[a-z0-9]+)*');
-Route::post('/company/{slug}', [ProductEnquiryController::class, 'store'])
+Route::post('/rise/{slug}', [ProductEnquiryController::class, 'store'])
     ->middleware('throttle:10,1')
     ->name('product-enquiry.record-submission')
     ->where('slug', '[a-z0-9]+(?:-[a-z0-9]+)*');
 
 // Draft preview — excluded from robots.txt, not linked from anywhere public
-Route::get('/company/{slug}/preview', [ProductEnquiryController::class, 'preview'])
+Route::get('/rise/{slug}/preview', [ProductEnquiryController::class, 'preview'])
     ->name('product-enquiry.preview');
+
+$riseSlugPattern = '[a-z0-9]+(?:-[a-z0-9]+)*';
+Route::redirect('/companies', '/rise', 301);
+Route::redirect('/company/{slug}', '/rise/{slug}', 301)->where('slug', $riseSlugPattern);
+Route::redirect('/company/{slug}/preview', '/rise/{slug}/preview', 301)->where('slug', $riseSlugPattern);
 
 Route::prefix('admin')->middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', function () {

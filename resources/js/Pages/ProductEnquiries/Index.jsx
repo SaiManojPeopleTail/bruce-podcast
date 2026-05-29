@@ -100,7 +100,7 @@ function DetailModal({ row, onClose }) {
 
             <dl className="space-y-4 text-sm">
                 <div>
-                    <dt className="font-medium text-gray-500 dark:text-slate-400">Product</dt>
+                    <dt className="font-medium text-gray-500 dark:text-slate-400">Brand</dt>
                     <dd className="mt-1 text-base font-semibold text-gray-900 dark:text-slate-100">{row.product_name}</dd>
                 </div>
                 <div>
@@ -581,11 +581,11 @@ export default function Index({ enquiries, filters, enquiriesExportAllCount = 0 
         <AuthenticatedLayout
             header={
                 <h2 className="text-xl font-semibold leading-tight text-gray-800 dark:text-slate-200">
-                    Product Enquiries
+                    Rise Enquiries
                 </h2>
             }
         >
-            <Head title="Product Enquiries" />
+            <Head title="Rise Enquiries" />
 
             <div className="w-full py-6">
                 <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -689,7 +689,7 @@ export default function Index({ enquiries, filters, enquiriesExportAllCount = 0 
                                                 </div>
                                             </div>
                                         </th>
-                                        {['Product', 'Name', 'Store name', 'Email', 'Phone', 'Notify', 'Submitted', 'Actions'].map((h, i) => (
+                                        {['Brand', 'Name', 'Store name', 'Email', 'Phone', 'Notify', 'Submitted', 'Actions'].map((h, i) => (
                                             <th
                                                 key={h}
                                                 scope="col"

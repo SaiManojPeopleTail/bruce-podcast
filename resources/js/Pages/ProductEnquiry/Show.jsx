@@ -141,6 +141,7 @@ function RetailersCard({ retailers }) {
 export default function ProductEnquiryShow({ slug, product }) {
     const images = product.signed_product_images ?? [];
     const videoUrl = product.signed_video_url ?? null;
+    const videoPosterUrl = product.signed_video_thumbnail_url ?? null;
 
     const mediaItems = useMemo(
         () => (images || []).map((src) => ({ type: isVideoUrl(src) ? 'video' : 'image', src })),
@@ -155,9 +156,10 @@ export default function ProductEnquiryShow({ slug, product }) {
     useEffect(() => {
         bannerThumbSeekDone.current = false;
         bannerFirstPlayHandled.current = false;
-    }, [videoUrl]);
+    }, [videoUrl, videoPosterUrl]);
 
     const trySeekBannerThumb = (e) => {
+        if (videoPosterUrl) return;
         const v = e.currentTarget;
         if (!v || bannerThumbSeekDone.current || bannerFirstPlayHandled.current) return;
         if (!v.duration || !Number.isFinite(v.duration) || v.duration <= 0) return;
@@ -172,6 +174,7 @@ export default function ProductEnquiryShow({ slug, product }) {
     };
 
     const onBannerVideoSeeked = (e) => {
+        if (videoPosterUrl) return;
         const v = e.currentTarget;
         if (bannerThumbSeekDone.current) return;
         if (!v.duration || !Number.isFinite(v.duration)) return;
@@ -222,13 +225,14 @@ export default function ProductEnquiryShow({ slug, product }) {
                 {videoUrl && (
                     <div className="mb-10 overflow-hidden rounded-2xl border border-gray-200 bg-transparent shadow-sm">
                         <video
-                            key={videoUrl}
+                            key={`${videoUrl}-${videoPosterUrl ?? ''}`}
                             src={videoUrl}
+                            poster={videoPosterUrl ?? undefined}
                             controls
                             controlsList="nodownload"
                             playsInline
                             muted
-                            preload="auto"
+                            preload={videoPosterUrl ? 'metadata' : 'auto'}
                             className="aspect-video h-auto w-full object-contain"
                             onLoadedMetadata={trySeekBannerThumb}
                             onProgress={trySeekBannerThumb}

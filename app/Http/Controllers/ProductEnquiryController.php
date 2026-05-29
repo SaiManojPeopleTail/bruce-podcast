@@ -70,7 +70,7 @@ class ProductEnquiryController extends Controller
             : rtrim($slice) . '…';
     }
 
-    private function buildSeoMeta(ProductQrList $product, array $signedImages): void
+    private function buildSeoMeta(ProductQrList $product, array $signedImages, ?string $signedVideoThumbnail = null): void
     {
         $appName     = config('app.name', 'Bruce W. Cole');
         $plainDesc   = $this->stripHtml((string) ($product->product_description ?? ''));
@@ -78,8 +78,8 @@ class ProductEnquiryController extends Controller
             ? $this->truncate($plainDesc, 155)
             : "Learn about {$product->product_name} — connect with our AI concierge for instant answers.";
 
-        $canonical   = rtrim(config('app.url'), '/') . '/company/' . $product->slug;
-        $ogImage     = $signedImages[0] ?? null;
+        $canonical   = route('product-enquiry.index', ['slug' => $product->slug]);
+        $ogImage     = $signedVideoThumbnail ?? $signedImages[0] ?? null;
 
         $title = "{$product->product_name} - {$appName}";
 
@@ -142,9 +142,12 @@ class ProductEnquiryController extends Controller
         $signedVideo = $product->video_url
             ? ($this->temporaryUrlForStorageUrl($product->video_url) ?? $product->video_url)
             : null;
+        $signedVideoThumbnail = $product->video_thumbnail_url
+            ? ($this->temporaryUrlForStorageUrl($product->video_thumbnail_url) ?? $product->video_thumbnail_url)
+            : null;
 
         if (! $isPreview) {
-            $this->buildSeoMeta($product, $signedImages);
+            $this->buildSeoMeta($product, $signedImages, $signedVideoThumbnail);
         }
 
         $design = config('features.product_enquiry_design', 'v1') === 'v2'
@@ -161,6 +164,7 @@ class ProductEnquiryController extends Controller
                 'product_description'   => $product->product_description,
                 'signed_product_images' => $signedImages,
                 'signed_video_url'      => $signedVideo,
+                'signed_video_thumbnail_url' => $signedVideoThumbnail,
                 'retailers'             => $product->retailers ?? [],
                 'elevenlabs_kb_id'      => $product->elevenlabs_kb_id,
                 'kb_rag_status'         => $product->kb_rag_status,

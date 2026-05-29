@@ -89,7 +89,7 @@ function ProductRow({ r, serialNo, onDeleteRequest, onQrRequest }) {
             <td className="whitespace-nowrap px-4 py-4 text-right">
                 <div className="flex justify-end gap-2">
                     <a
-                        href={active ? `/company/${r.slug}` : `/company/${r.slug}/preview`}
+                        href={active ? route('product-enquiry.index', { slug: r.slug }) : route('product-enquiry.preview', { slug: r.slug })}
                         target="_blank"
                         rel="noopener noreferrer"
                         className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium shadow-sm transition ${
@@ -145,7 +145,7 @@ function formatDate(iso) {
 
 function QrModal({ product, onClose }) {
     const qrRef = useRef(null);
-    const qrUrl = `${window.location.origin}/company/${product.slug}`;
+    const qrUrl = route('product-enquiry.index', { slug: product.slug });
 
     const handleDownload = () => {
         qrRef.current?.download({ name: product.slug, format: 'png', size: 512 });
@@ -227,11 +227,11 @@ export default function Index({ products, filters }) {
         <AuthenticatedLayout
             header={
                 <h2 className="text-xl font-semibold leading-tight text-gray-800 dark:text-slate-200">
-                    QR Companies
+                    Rise Brands
                 </h2>
             }
         >
-            <Head title="QR Companies" />
+            <Head title="Rise Brands" />
 
             <div className="w-full py-6">
                 <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -240,7 +240,7 @@ export default function Index({ products, filters }) {
                             type="search"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            placeholder="Search by name or slug…"
+                            placeholder="Search by brand name or slug…"
                             className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
                         />
                         <button
@@ -251,7 +251,7 @@ export default function Index({ products, filters }) {
                         </button>
                     </form>
                     <Link href={route('product-qr-lists.create')}>
-                        <PrimaryButton>Add QR Company</PrimaryButton>
+                        <PrimaryButton>Add Brand</PrimaryButton>
                     </Link>
                 </div>
 
@@ -259,15 +259,15 @@ export default function Index({ products, filters }) {
                     {rows.length === 0 ? (
                         <div className="p-12 text-center text-gray-500 dark:text-slate-400">
                             {filters?.search
-                                ? 'No products match your search.'
-                                : 'No QR companies yet. Add your first one.'}
+                                ? 'No brands match your search.'
+                                : 'No Rise brands yet. Add your first one.'}
                         </div>
                     ) : (
                         <div className="overflow-x-auto">
                             <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
                                 <thead className="bg-gray-50 dark:bg-slate-900/50">
                                     <tr>
-                                        {['S.No.', 'Product', 'Slug', 'Images', 'Video', 'Published', 'Created', 'Actions'].map((h, i) => (
+                                        {['S.No.', 'Brand', 'Slug', 'Images', 'Video', 'Published', 'Created', 'Actions'].map((h, i) => (
                                             <th
                                                 key={h}
                                                 scope="col"
@@ -340,9 +340,9 @@ export default function Index({ products, filters }) {
             {/* Delete Modal */}
             <Modal show={!!deleteId} onClose={() => setDeleteId(null)} maxWidth="sm">
                 <div className="p-6">
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-slate-100">Delete QR Company</h3>
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-slate-100">Delete brand</h3>
                     <p className="mt-2 text-sm text-gray-600 dark:text-slate-400">
-                        This permanently removes the QR company entry and deletes all associated images and video from S3. This cannot be undone.
+                        This permanently removes the Rise brand and deletes all associated images and video from S3. This cannot be undone.
                     </p>
                     <div className="mt-6 flex justify-end gap-3">
                         <button

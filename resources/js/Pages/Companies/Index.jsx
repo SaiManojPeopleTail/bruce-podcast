@@ -107,10 +107,10 @@ export default function CompaniesIndex({ companies = [], filters = {}, paginatio
                 >
                     <div>
                         <h1 className="text-3xl md:text-4xl font-bold text-gray-900 barlow-condensed-semibold tracking-tight">
-                            Companies
+                        RISE - <span className="font-semibold text-2xl md:text-3xl">Retail Innovation feat. New and Emerging Brands.</span>
                         </h1>
-                        <p className="mt-2 text-gray-600 max-w-2xl">
-                            Explore featured brands and connect with their AI concierge.
+                        <p className="mt-3 text-gray-600 max-w-3xl leading-relaxed">
+                            Dedicated to helping retailers across Canada discover innovative new and emerging brands, products, and ideas worth watching.
                         </p>
                     </div>
 
@@ -125,9 +125,9 @@ export default function CompaniesIndex({ companies = [], filters = {}, paginatio
                                 type="search"
                                 value={searchInput}
                                 onChange={(e) => setSearchInput(e.target.value)}
-                                placeholder="Search companies…"
+                                placeholder="Search..."
                                 className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#ffde59]/50 focus:border-[#ffde59]/40 transition-colors"
-                                aria-label="Search companies"
+                                aria-label="Search Rise"
                             />
                         </div>
                         <div className="flex items-center gap-2 shrink-0">

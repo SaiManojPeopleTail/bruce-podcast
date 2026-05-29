@@ -510,6 +510,7 @@ function AboutConciergeCard({ product }) {
 export default function ProductEnquiryShowV2({ slug, product }) {
     const images = product.signed_product_images ?? [];
     const videoUrl = product.signed_video_url ?? null;
+    const videoPosterUrl = product.signed_video_thumbnail_url ?? null;
 
 
     const mediaItems = useMemo(
@@ -547,9 +548,10 @@ export default function ProductEnquiryShowV2({ slug, product }) {
     useEffect(() => {
         bannerThumbSeekDone.current    = false;
         bannerFirstPlayHandled.current = false;
-    }, [videoUrl]);
+    }, [videoUrl, videoPosterUrl]);
 
     const trySeekBannerThumb = (e) => {
+        if (videoPosterUrl) return;
         const v = e.currentTarget;
         if (!v || bannerThumbSeekDone.current || bannerFirstPlayHandled.current) return;
         if (!v.duration || !Number.isFinite(v.duration) || v.duration <= 0) return;
@@ -563,6 +565,7 @@ export default function ProductEnquiryShowV2({ slug, product }) {
         } catch { /* ignore */ }
     };
     const onBannerVideoSeeked = (e) => {
+        if (videoPosterUrl) return;
         const v = e.currentTarget;
         if (bannerThumbSeekDone.current) return;
         if (!v.duration || !Number.isFinite(v.duration)) return;
@@ -613,7 +616,7 @@ export default function ProductEnquiryShowV2({ slug, product }) {
             <Head title={product.product_name} />
 
             <div className="relative mx-auto mt-0 w-full max-w-7xl flex-1 px-4 py-12 sm:px-6 md:py-16 lg:px-8">
-                <nav aria-label="Breadcrumb" className="mb-8 text-sm text-gray-500">
+                <nav aria-label="Breadcrumb" className="mb-8 text-sm text-gray-500 mt-10">
                     <ol className="flex items-center gap-1" itemScope itemType="https://schema.org/BreadcrumbList">
                         <li itemProp="itemListElement" itemScope itemType="https://schema.org/ListItem">
                             <Link href={route('welcome')} className="font-medium text-[#b59100] hover:underline" itemProp="item">
@@ -621,7 +624,14 @@ export default function ProductEnquiryShowV2({ slug, product }) {
                             </Link>
                             <meta itemProp="position" content="1" />
                         </li>
-                        <li className="mx-2 text-gray-400" aria-hidden>/</li>
+                        <li className="mx-1 text-gray-400" aria-hidden>/</li>
+                        <li itemProp="itemListElement" itemScope itemType="https://schema.org/ListItem">
+                            <Link href={route('companies-list')} className="font-medium text-[#b59100] hover:underline" itemProp="item">
+                                <span itemProp="name">Rise</span>
+                            </Link>
+                            <meta itemProp="position" content="1" />
+                        </li>
+                        <li className="mx-1 text-gray-400" aria-hidden>/</li>
                         <li itemProp="itemListElement" itemScope itemType="https://schema.org/ListItem">
                             <span className="text-gray-700" itemProp="name">{product.product_name}</span>
                             <meta itemProp="position" content="2" />
@@ -632,13 +642,13 @@ export default function ProductEnquiryShowV2({ slug, product }) {
                 {videoUrl && (
                     <div className="mb-10 overflow-hidden rounded-2xl border border-gray-200 bg-transparent shadow-sm">
                         <video
-                            key={videoUrl}
+                            key={`${videoUrl}-${videoPosterUrl ?? ''}`}
                             src={videoUrl}
+                            poster={videoPosterUrl ?? undefined}
                             controls
                             controlsList="nodownload"
                             playsInline
-                            // muted
-                            preload="auto"
+                            preload={videoPosterUrl ? 'metadata' : 'auto'}
                             className="aspect-video h-auto w-full object-contain"
                             onLoadedMetadata={trySeekBannerThumb}
                             onProgress={trySeekBannerThumb}

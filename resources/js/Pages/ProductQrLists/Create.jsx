@@ -5,6 +5,7 @@ import SortableMediaGrid from '@/Components/Admin/SortableMediaGrid';
 import ProductContentExtractorModal from '@/Components/Admin/ProductContentExtractorModal';
 import RetailersEditor, { resolveRetailerConflicts } from '@/Components/Admin/RetailersEditor';
 import SocialPostsManager from '@/Components/Admin/SocialPostsManager';
+import VideoThumbnailUpload from '@/Components/Admin/VideoThumbnailUpload';
 import PrimaryButton from '@/Components/PrimaryButton';
 import RichTextEditor from '@/Components/RichTextEditor';
 import {
@@ -79,6 +80,7 @@ export default function Create() {
     const [mediaItems, setMediaItems] = useState([]);
     const [video, setVideo] = useState(null);
     const [videoName, setVideoName] = useState('');
+    const [videoThumbnail, setVideoThumbnail] = useState(null);
     const [notificationEmail, setNotificationEmail] = useState('');
     const [errors, setErrors] = useState({});
     const [processing, setProcessing] = useState(false);
@@ -91,9 +93,7 @@ export default function Create() {
     useEffect(() => { mediaItemsRef.current = mediaItems; });
     useEffect(() => () => { revokeUploadPreviews(mediaItemsRef.current); }, []);
 
-    const qrUrl = slug
-        ? `${window.location.origin}/company/${slug}`
-        : '';
+    const qrUrl = slug ? route('product-enquiry.index', { slug }) : '';
 
     const checkSlug = useCallback(async (rawSlug) => {
         if (!rawSlug) {
@@ -184,7 +184,7 @@ export default function Create() {
         if (processing) return;
 
         if (!productName.trim()) {
-            setErrors({ product_name: 'Name is required.' });
+            setErrors({ product_name: 'Brand name is required.' });
             return;
         }
         if (!slug || slugStatus === 'checking') {
@@ -236,12 +236,13 @@ export default function Create() {
             fd.append('media_order', JSON.stringify(order));
         }
         if (video) fd.append('video', video);
+        if (videoThumbnail) fd.append('video_thumbnail', videoThumbnail);
 
         const hasShopifyImages = mediaItems.some((item) => item.kind === 'shopify');
         const hasKb = pendingKbText.trim().length >= 100;
 
         const steps = [
-            { id: 'save', label: 'Creating QR Company…', status: 'active' },
+            { id: 'save', label: 'Creating brand…', status: 'active' },
             ...(hasShopifyImages ? [{ id: 'images', label: `Uploading ${mediaItems.filter((i) => i.kind === 'shopify').length} product image${mediaItems.filter((i) => i.kind === 'shopify').length > 1 ? 's' : ''} to S3…`, status: 'active' }] : []),
             ...(hasKb ? [{ id: 'kb', label: 'Uploading knowledge base…', status: 'active' }] : []),
         ];
@@ -287,11 +288,11 @@ export default function Create() {
         <AuthenticatedLayout
             header={
                 <h2 className="text-xl font-semibold leading-tight text-gray-800 dark:text-slate-200">
-                    Add QR Company
+                    Add Rise Brand
                 </h2>
             }
         >
-            <Head title="Add QR Company" />
+            <Head title="Add Rise Brand" />
 
             <div className="w-full pb-24">
                 <form id="create-qr-form" onSubmit={handleSubmit}>
@@ -304,7 +305,7 @@ export default function Create() {
                             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                 <div>
                                     <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-100">
-                                        Generate from product URL
+                                        Generate from brand URL
                                     </h3>
                                     <p className="mt-1 text-xs text-amber-800/80 dark:text-amber-200/80">
                                         Opens a GPT web-search modal. Nothing is saved until you submit this form.
@@ -324,7 +325,7 @@ export default function Create() {
                         <div className="grid grid-cols-[1fr_auto] items-start gap-5">
                             <div className="space-y-5">
                                 <div>
-                                    <InputLabel htmlFor="product_name" value="Name *" />
+                                    <InputLabel htmlFor="product_name" value="Brand name *" />
                                     <input
                                         id="product_name"
                                         type="text"
@@ -395,7 +396,7 @@ export default function Create() {
                                 <RichTextEditor
                                     value={description}
                                     onChange={setDescription}
-                                    placeholder="Describe the company and its products — mission, product range, key benefits…"
+                                    placeholder="Describe the brand — mission, product range, key benefits…"
                                 />
                             </div>
                             <InputError message={errors.product_description} className="mt-1" />
@@ -420,10 +421,10 @@ export default function Create() {
                             <InputError message={errors.notification_email} className="mt-1" />
                         </div>
 
-                        {/* Product Media */}
+                        {/* Brand media */}
                         <div>
                             <div className="mb-2 flex items-center justify-between">
-                                <InputLabel value={`Product Media (up to ${MAX_MEDIA})`} />
+                                <InputLabel value={`Brand media (up to ${MAX_MEDIA})`} />
                                 <span className="text-xs text-gray-500 dark:text-slate-400">
                                     {mediaItems.length} / {MAX_MEDIA}
                                 </span>
@@ -473,7 +474,7 @@ export default function Create() {
 
                         {/* Video */}
                         <div>
-                            <InputLabel value="Product Video" />
+                            <InputLabel value="Brand video" />
                             <label
                                 className={`mt-1 flex cursor-pointer items-center gap-3 rounded-lg border border-dashed px-4 py-4 transition ${
                                     draggingVideo
@@ -517,6 +518,11 @@ export default function Create() {
                             </label>
                             <InputError message={errors.video} className="mt-1" />
                         </div>
+
+                        <VideoThumbnailUpload
+                            error={errors.video_thumbnail}
+                            onFileChange={setVideoThumbnail}
+                        />
                     </div>{/* end left column */}
 
                     {/* ── Right column ── */}
@@ -550,7 +556,7 @@ export default function Create() {
                                         onChange={(e) => setFirstMessage(e.target.value)}
                                         rows={3}
                                         maxLength={1000}
-                                        placeholder="Override the agent's opening message for this product…"
+                                        placeholder="Override the agent's opening message for this brand…"
                                         className="mt-1 block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-slate-500 dark:bg-slate-700 dark:text-slate-100 dark:placeholder-slate-400"
                                     />
                                     <InputError message={errors.first_message} className="mt-1" />
@@ -609,7 +615,7 @@ export default function Create() {
                                 </div>
                             ) : (
                                 <p className="text-xs text-gray-400 dark:text-slate-500">
-                                    Use <strong className="text-amber-700 dark:text-amber-400">Automatic</strong> above to generate KB content. It will be uploaded to ElevenLabs when you save the product.
+                                    Use <strong className="text-amber-700 dark:text-amber-400">Automatic</strong> above to generate KB content. It will be uploaded to ElevenLabs when you save the brand.
                                 </p>
                             )}
                         </div>
@@ -634,7 +640,7 @@ export default function Create() {
                                 Saving…
                             </span>
                         ) : (
-                            'Save QR Company'
+                            'Save brand'
                         )}
                     </PrimaryButton>
                 </div>
@@ -683,7 +689,7 @@ export default function Create() {
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
                     <div className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-800">
                         <h3 className="text-base font-semibold text-gray-900 dark:text-slate-100">
-                            Creating QR Company
+                            Creating brand…
                         </h3>
 
                         <div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 dark:border-amber-800/40 dark:bg-amber-900/20">

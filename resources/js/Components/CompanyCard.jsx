@@ -15,22 +15,22 @@ export default function CompanyCard({ company }) {
 
     return (
         <a
-            href={company.url}
-            target="_blank"
+            href={route('product-enquiry.index', { slug: company.slug })}
+            // target="_blank"
             rel="noopener noreferrer"
             className="block w-full group"
         >
             <Article
-                className="relative flex min-h-0 w-full flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-md transition-shadow duration-300 sm:max-h-56 sm:flex-row lg:max-h-64"
+                className="relative flex min-h-0 w-full flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-md transition-shadow duration-300 sm:max-h-[245px] sm:flex-row"
                 {...(!reduceMotion && {
                     whileHover: { y: -4, boxShadow: yellowShadow, transition: { duration: 0.25, ease: [0.22, 1, 0.36, 1] } },
                     transition: { duration: 0.3 },
                 })}
             >
-                {/* Mobile: full-width square · sm+: fixed square column */}
-                <div className="w-full flex-shrink-0 overflow-hidden rounded-t-xl sm:w-56 sm:rounded-l-xl sm:rounded-t-none lg:w-64">
+                {/* 16:9 thumbnail (1080p ratio) — full width on mobile, fixed column on sm+ */}
+                <div className="w-full flex-shrink-0 overflow-hidden rounded-t-xl sm:w-96 sm:min-w-[24rem] sm:rounded-l-xl sm:rounded-t-none lg:w-[28rem] lg:min-w-[28rem]">
                     <ThumbWrap
-                        className="relative aspect-square w-full overflow-hidden bg-gray-100 sm:h-56 sm:w-56 lg:h-64 lg:w-64"
+                        className="relative aspect-video w-full overflow-hidden bg-gray-100 sm:aspect-auto sm:h-full sm:max-h-[245px]"
                         {...(!reduceMotion && { whileHover: { scale: 1.03 }, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } })}
                     >
                         {showPlaceholder ? (

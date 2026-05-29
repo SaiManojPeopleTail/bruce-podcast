@@ -1,9 +1,19 @@
 import { useConversation } from '@11labs/react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { CheckCircle, ChevronLeft, ClipboardList, MessageSquare, Mic, MicOff, Phone, PhoneOff, Send, Sparkles, X } from 'lucide-react';
+import { CheckCircle, ChevronLeft, ClipboardList, Loader2, MessageSquare, Mic, MicOff, Phone, PhoneOff, Send, Sparkles, X } from 'lucide-react';
 import { forwardRef, useCallback, useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+
+const AGENT_NAME = 'Hannah';
+const AGENT_IMAGE = '/images/hannah-agent.png';
+
+/** Agent TTS output = bronze · User mic input = honey-gold (same family, clearly distinct) */
+const VOICE_PALETTE = {
+    agent: { ring: '#b59100', glow: 'rgba(181,145,0,0.55)' },
+    user: { ring: '#c9a227', glow: 'rgba(255,222,89,0.7)' },
+    idle: { ring: '#b59100', glow: 'rgba(181,145,0,0.14)' },
+};
 
 async function fetchSignedUrl() {
     const res = await fetch(route('ai-concierge.signed-url'), {
@@ -46,7 +56,7 @@ function buildSessionOverrides(systemPrompt, product, textOnly) {
     };
 
     const firstMessage = product.first_message?.trim()
-        || `Hello! I'm Allison. What question do you have about ${product.product_name} ?`;
+        || `Hello! I'm Hannah. What question do you have about ${product.product_name} ?`;
 
     return {
         agent: {
@@ -189,56 +199,63 @@ function buildSystemPrompt(product, textMode = false) {
         .join('\n');
 }
 
-function VoiceWave() {
+function ConnectingSpinner({ label = 'Connecting…', size = 'sm' }) {
+    const icon = size === 'xs' ? 'h-3 w-3' : 'h-4 w-4';
+    const text = size === 'xs' ? 'text-xs' : 'text-sm';
     return (
-        <span className="flex items-end gap-[3px]">
-            {[0, 1, 2, 3, 4].map((i) => (
-                <span
-                    key={i}
-                    className="w-[3px] rounded-full bg-white"
-                    style={{
-                        height: `${12 + Math.sin(i * 1.3) * 8}px`,
-                        animation: `voiceBar 0.8s ease-in-out ${i * 0.12}s infinite alternate`,
-                    }}
-                />
-            ))}
+        <span className={`flex items-center gap-1.5 font-medium text-[#b59100] ${text}`}>
+            <Loader2 className={`${icon} shrink-0 animate-spin`} aria-hidden />
+            {label}
         </span>
     );
 }
 
-function VoiceOrb({ isSpeaking, status, compact = false }) {
+function HannahVoiceAvatar({ audioMode, audioLevel, status, compact = false }) {
     const active = status === 'connected';
-    const orbSize   = compact ? 'h-10 w-10' : 'h-16 w-16';
-    const ringOuter = compact ? 'h-16 w-16' : 'h-28 w-28';
-    const ringInner = compact ? 'h-12 w-12' : 'h-20 w-20';
-    const iconSize  = compact ? 'h-4 w-4' : 'h-6 w-6';
+    const palette = VOICE_PALETTE[audioMode] ?? VOICE_PALETTE.idle;
+    const level = active ? audioLevel : 0;
+
+    const imgSize = compact ? 'h-16 w-16' : 'h-36 w-36';
+    const isUser = audioMode === 'user';
+    const glowLo = compact
+        ? (isUser ? 10 : 6)
+        : (isUser ? 20 : 14);
+    const glowHi = compact
+        ? (isUser ? 16 + level * 22 : 14 + level * 12)
+        : (isUser ? 34 + level * 40 : 28 + level * 28);
+    const pulseDuration = audioMode === 'agent' ? 0.42 : audioMode === 'user' ? 0.55 : 1.1;
+
     return (
-        <div className="relative flex items-center justify-center">
-            {active && (
-                <>
-                    <span
-                        className={`absolute ${ringOuter} rounded-full transition-all duration-300 ${
-                            isSpeaking ? 'animate-ping bg-[#b59100]/15' : 'animate-pulse bg-[#b59100]/10'
-                        }`}
-                    />
-                    <span className={`absolute ${ringInner} rounded-full bg-[#b59100]/10`} />
-                </>
-            )}
-            <div
-                className={`relative flex ${orbSize} items-center justify-center rounded-full border-2 shadow-sm transition-all duration-300 ${
-                    isSpeaking
-                        ? 'border-[#b59100] bg-[#b59100] shadow-[0_0_24px_rgba(181,145,0,0.35)]'
+        <div className={`relative flex shrink-0 items-center justify-center ${compact ? 'p-0.5' : 'p-1'}`}>
+            <motion.div
+                key={audioMode}
+                className={`relative overflow-hidden rounded-full border-2 ${imgSize}`}
+                style={{ borderColor: palette.ring }}
+                animate={
+                    active && audioMode !== 'idle'
+                        ? {
+                              boxShadow: [
+                                  `0 0 ${glowLo}px ${palette.glow}`,
+                                  `0 0 ${glowHi}px ${palette.glow}`,
+                                  `0 0 ${glowLo}px ${palette.glow}`,
+                              ],
+                          }
                         : active
-                        ? 'border-[#b59100]/50 bg-white'
-                        : 'border-gray-300 bg-gray-50'
-                }`}
+                        ? { boxShadow: `0 0 ${glowLo}px ${palette.glow}` }
+                        : { boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }
+                }
+                transition={
+                    active && audioMode !== 'idle'
+                        ? { duration: pulseDuration, repeat: Infinity, ease: 'easeInOut' }
+                        : { duration: 0.2 }
+                }
             >
-                {isSpeaking ? (
-                    <VoiceWave />
-                ) : (
-                    <Mic className={`${iconSize} ${active ? 'text-[#b59100]' : 'text-gray-400'}`} />
-                )}
-            </div>
+                <img
+                    src={AGENT_IMAGE}
+                    alt={`${AGENT_NAME}, your AI concierge`}
+                    className="h-full w-full object-cover scale-[1.12]"
+                />
+            </motion.div>
         </div>
     );
 }
@@ -437,6 +454,62 @@ const EnquiryFormOverlay = forwardRef(function EnquiryFormOverlay({ formData, on
     );
 });
 
+function BeforeStartDisclaimer({ onConfirm }) {
+    return (
+        <motion.div
+            className="absolute inset-0 z-50 flex items-center justify-center p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="before-start-title"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2, ease: disclaimerEase }}
+        >
+            <motion.div
+                className="absolute inset-0 bg-gray-900/25"
+                aria-hidden
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.22, ease: disclaimerEase }}
+            />
+            <motion.div
+                className="relative w-full max-w-[17rem] rounded-2xl border border-gray-200 bg-white p-5 shadow-lg ring-1 ring-black/5"
+                initial={{ opacity: 0, scale: 0.9, y: 16 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.94, y: 10 }}
+                transition={{ duration: 0.26, ease: disclaimerEase }}
+            >
+                <div className="flex flex-col items-center gap-3 text-center">
+                    <motion.img
+                        src={AGENT_IMAGE}
+                        alt={`${AGENT_NAME}, your AI concierge`}
+                        className="h-16 w-16 rounded-full object-cover ring-2 ring-[#ffde59]/50"
+                        initial={{ opacity: 0, scale: 0.85 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        transition={{ duration: 0.24, delay: 0.04, ease: disclaimerEase }}
+                    />
+                    <h3 id="before-start-title" className="text-base font-bold text-gray-900">
+                        Before you start
+                    </h3>
+                    <p className="text-xs leading-relaxed text-gray-600">
+                        {AGENT_NAME} is an AI assistant and can make mistakes.
+                    </p>
+                    <button
+                        type="button"
+                        onClick={onConfirm}
+                        className="w-full rounded-lg bg-[#b59100] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#9a7c00] focus:outline-none focus:ring-2 focus:ring-[#b59100]/50"
+                    >
+                        Okay
+                    </button>
+                </div>
+            </motion.div>
+        </motion.div>
+    );
+}
+
 function ModeCard({ icon: Icon, label, description, onClick }) {
     return (
         <button
@@ -463,6 +536,9 @@ const slideVariants = {
     exit: { opacity: 0, x: -24 },
 };
 
+const disclaimerEase = [0.22, 1, 0.36, 1];
+const DISCLAIMER_EXIT_MS = 260;
+
 const EMPTY_FORM = { name: '', store_name: '', phone: '', email: '', message: '' };
 
 /**
@@ -481,6 +557,7 @@ export default function AiConcierge({ product, autoStart = null, initialUserMess
     const inputRef = useRef(null);
 
     const [micMuted, setMicMuted] = useState(false);
+    const [pendingStartMode, setPendingStartMode] = useState(null); // 'voice' | 'text' | null
 
     // Form overlay state
     const [formVisible, setFormVisible]     = useState(false);
@@ -571,7 +648,7 @@ export default function AiConcierge({ product, autoStart = null, initialUserMess
         setStreamingText(streamingRef.current);
     }, []);
 
-    const { status, isSpeaking, startSession, endSession, sendUserMessage } = useConversation({
+    const { status, isSpeaking, startSession, endSession, sendUserMessage, getInputVolume, getOutputVolume } = useConversation({
         micMuted,
         onMessage,
         onConnect: () => console.log('[AiConcierge] connected'),
@@ -739,6 +816,19 @@ export default function AiConcierge({ product, autoStart = null, initialUserMess
         }
     }, [startSession, textPrompt, product, makeClientTools]);
 
+    const requestStartVoice = useCallback(() => setPendingStartMode('voice'), []);
+    const requestStartText = useCallback(() => setPendingStartMode('text'), []);
+
+    const confirmStart = useCallback(() => {
+        const mode = pendingStartMode;
+        if (!mode) return;
+        setPendingStartMode(null);
+        window.setTimeout(() => {
+            if (mode === 'voice') startVoice();
+            else if (mode === 'text') startText();
+        }, DISCLAIMER_EXIT_MS);
+    }, [pendingStartMode, startVoice, startText]);
+
     // Keep the ref-mirror for sendUserMessage fresh
     useEffect(() => {
         sendUserMessageRef.current = sendUserMessage;
@@ -753,9 +843,9 @@ export default function AiConcierge({ product, autoStart = null, initialUserMess
 
         if (autoStart === 'text') {
             if (initialUserMessage) pendingFirstUserMessage.current = initialUserMessage;
-            startText();
+            setPendingStartMode('text');
         } else if (autoStart === 'voice') {
-            startVoice();
+            setPendingStartMode('voice');
         }
         // autoStart === 'mode' is already handled by initial stage state
     }, [autoStart, initialUserMessage, startText, startVoice]);
@@ -774,6 +864,7 @@ export default function AiConcierge({ product, autoStart = null, initialUserMess
         setFormErrors({});
         setFormSubmitted(false);
         setMicMuted(false);
+        setPendingStartMode(null);
     }, [endSession, status]);
 
     const sendText = useCallback(() => {
@@ -813,6 +904,47 @@ export default function AiConcierge({ product, autoStart = null, initialUserMess
         : status === 'disconnecting' ? 'Ending call…'
         : null;
 
+    const conversationStarted = status === 'connected';
+
+    const [voiceAudioLevel, setVoiceAudioLevel] = useState(0.12);
+    const [voiceAudioMode, setVoiceAudioMode] = useState('idle');
+
+    useEffect(() => {
+        if (stage !== 'voice' || status !== 'connected') {
+            setVoiceAudioLevel(0.12);
+            setVoiceAudioMode('idle');
+            return undefined;
+        }
+
+        let raf = 0;
+        const tick = () => {
+            const inputRaw = getInputVolume?.() ?? 0;
+            const outputRaw = getOutputVolume?.() ?? 0;
+            // Mic levels are often quieter than agent output — boost input for visible pulse
+            const inputLevel = Math.min(1, Math.sqrt(Math.max(0, inputRaw)) * 2.2);
+            const outputLevel = Math.min(1, outputRaw * 1.5);
+
+            const agentActive = isSpeaking || outputLevel > 0.08;
+            const userActive = !agentActive && !micMuted && inputLevel > 0.05;
+
+            if (agentActive) {
+                setVoiceAudioMode('agent');
+                setVoiceAudioLevel(Math.max(outputLevel, isSpeaking ? 0.55 : 0.3));
+            } else if (userActive) {
+                setVoiceAudioMode('user');
+                setVoiceAudioLevel(Math.max(0.35, inputLevel));
+            } else {
+                setVoiceAudioMode('idle');
+                setVoiceAudioLevel(0.12);
+            }
+
+            raf = requestAnimationFrame(tick);
+        };
+
+        raf = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(raf);
+    }, [stage, status, isSpeaking, micMuted, getInputVolume, getOutputVolume]);
+
     return (
         <>
             <section
@@ -836,8 +968,8 @@ export default function AiConcierge({ product, autoStart = null, initialUserMess
                             <Sparkles className="h-4 w-4 text-[#b59100]" />
                         </span>
                         <div>
-                            <h2 className="barlow-condensed-semibold text-base font-bold text-gray-900 leading-tight">
-                                Connect with Allison
+                            <h2 className="barlow-condensed-semibold text-xl md:text-2xl font-bold text-gray-900 leading-tight">
+                                Connect with Hannah
                             </h2>
                         </div>
                     </div>
@@ -856,9 +988,12 @@ export default function AiConcierge({ product, autoStart = null, initialUserMess
                         {stage === 'voice' && (
                             <button
                                 type="button"
+                                disabled={!conversationStarted}
                                 onClick={() => setMicMuted((m) => !m)}
                                 aria-label={micMuted ? 'Unmute microphone' : 'Mute microphone'}
-                                className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition focus:outline-none focus:ring-2 ${
+                                aria-disabled={!conversationStarted}
+                                title={conversationStarted ? undefined : 'Available once the conversation starts'}
+                                className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-inherit ${
                                     micMuted
                                         ? 'border-gray-300 bg-gray-100 text-gray-600 hover:bg-gray-200 focus:ring-gray-300'
                                         : 'border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100 focus:ring-blue-300'
@@ -871,8 +1006,11 @@ export default function AiConcierge({ product, autoStart = null, initialUserMess
                         {(stage === 'voice' || stage === 'text') && (
                             <button
                                 type="button"
+                                disabled={!conversationStarted}
                                 onClick={handleEnd}
-                                className="flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-500 transition hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-300"
+                                aria-disabled={!conversationStarted}
+                                title={conversationStarted ? undefined : 'Available once the conversation starts'}
+                                className="flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-500 transition hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-300 disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-red-50"
                             >
                                 <PhoneOff className="h-3 w-3" />
                                 End
@@ -883,6 +1021,11 @@ export default function AiConcierge({ product, autoStart = null, initialUserMess
 
                 {/* Stage body — all transitions happen in this fixed-height area */}
                 <div className="relative flex-1 overflow-hidden">
+                    <AnimatePresence>
+                        {pendingStartMode && (
+                            <BeforeStartDisclaimer key="before-start-disclaimer" onConfirm={confirmStart} />
+                        )}
+                    </AnimatePresence>
                     <AnimatePresence mode="wait" initial={false}>
                         {/* ── Idle ── */}
                         {stage === 'idle' && (
@@ -895,15 +1038,19 @@ export default function AiConcierge({ product, autoStart = null, initialUserMess
                                 transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
                                 className="absolute inset-0 flex flex-col items-center justify-center gap-5 px-8 text-center"
                             >
-                                <div className="flex h-16 w-16 items-center justify-center rounded-full border border-[#b59100]/30 bg-amber-50">
-                                    <Sparkles className="h-8 w-8 text-[#b59100]" />
+                                <div className="flex h-48 w-48 items-center justify-center rounded-full border-2 border-[#ffde59]/60 overflow-hidden" style={{ boxShadow: '0 0 24px rgba(255, 222, 89, 0.65)' }}>
+                                    <img
+                                        src="/images/hannah-agent.png"
+                                        alt="Hannah, your AI concierge"
+                                        className="w-full h-full rounded-full object-cover shadow-md scale-[1.15]"
+                                    />
                                 </div>
                                 <div>
                                     <p className="text-base font-semibold text-gray-900">
-                                        Questions about this product?
+                                        Got questions? Ask Hannah.
                                     </p>
-                                    <p className="mt-1.5 text-sm leading-relaxed text-gray-500">
-                                        Chat or speak with our AI concierge for instant answers about{' '}
+                                    <p className="mt-2 text-sm leading-relaxed text-gray-500">
+                                        Chat or speak with Hannah for instant answers about{' '}
                                         <span className="font-medium text-gray-700">{product.product_name}</span>.
                                     </p>
                                 </div>
@@ -913,7 +1060,7 @@ export default function AiConcierge({ product, autoStart = null, initialUserMess
                                     className="flex items-center gap-2 rounded-xl bg-[#b59100] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#9a7c00] focus:outline-none focus:ring-2 focus:ring-[#b59100]/50 focus:ring-offset-2"
                                 >
                                     <Sparkles className="h-4 w-4" />
-                                    Start AI Concierge
+                                    Connect with Hannah
                                 </button>
                                 <button
                                     type="button"
@@ -942,6 +1089,21 @@ export default function AiConcierge({ product, autoStart = null, initialUserMess
                                         {sessionError}
                                     </p>
                                 )}
+                                <div className="flex items-center justify-center mb-2">
+                                    <motion.div
+                                        whileHover={{ scale: 1.08 }}
+                                        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                                        className="h-48 w-48 rounded-full overflow-hidden border-2 border-[#ffde59]/60"
+                                        style={{ boxShadow: '0 0 24px rgba(255, 222, 89, 0.65)' }}
+                                    >
+                                        <img
+                                            src="/images/hannah-agent.png"
+                                            alt="Hannah, your AI concierge"
+                                            className="w-full h-full rounded-full object-cover shadow-md scale-[1.15]"
+                                        />
+                                    </motion.div>
+                                </div>
+                          
                                 <p className="text-center text-sm font-medium text-gray-600">
                                     How would you like to connect?
                                 </p>
@@ -950,22 +1112,22 @@ export default function AiConcierge({ product, autoStart = null, initialUserMess
                                         icon={Mic}
                                         label="Voice"
                                         description="Speak naturally"
-                                        onClick={startVoice}
+                                        onClick={requestStartVoice}
                                     />
                                     <ModeCard
                                         icon={MessageSquare}
                                         label="Text"
                                         description="Chat via messages"
-                                        onClick={startText}
+                                        onClick={requestStartText}
                                     />
                                 </div>
-                                <button
+                                {/* <button
                                     type="button"
                                     onClick={() => setStage('idle')}
                                     className="text-center text-xs text-gray-400 transition hover:text-gray-600 focus:outline-none"
                                 >
                                     ← Back
-                                </button>
+                                </button> */}
                             </motion.div>
                         )}
 
@@ -991,17 +1153,30 @@ export default function AiConcierge({ product, autoStart = null, initialUserMess
                                             transition={{ duration: 0.2 }}
                                             className="shrink-0 flex items-center gap-3 border-b border-gray-100 px-4 py-3 bg-gradient-to-r from-[#fffdf0] to-white overflow-hidden"
                                         >
-                                            <VoiceOrb isSpeaking={isSpeaking} status={status} compact />
+                                            <HannahVoiceAvatar
+                                                audioMode={voiceAudioMode}
+                                                audioLevel={voiceAudioLevel}
+                                                status={status}
+                                                compact
+                                            />
                                             <div className="flex-1 min-w-0">
-                                                <p className="text-xs font-semibold text-[#b59100] leading-tight">
-                                                    {statusLabel ?? 'Voice active'}
-                                                </p>
+                                                {status === 'connecting' ? (
+                                                    <ConnectingSpinner size="xs" />
+                                                ) : (
+                                                    <p className="text-xs font-semibold text-[#b59100] leading-tight">
+                                                        {statusLabel ?? 'Voice active'}
+                                                    </p>
+                                                )}
                                                 <p className="text-[10px] text-gray-400 leading-tight mt-0.5 truncate">
-                                                    {isSpeaking ? 'Agent is speaking…' : 'Speak to fill the form or type below'}
+                                                    {status === 'connecting'
+                                                        ? 'Please wait…'
+                                                        : isSpeaking
+                                                        ? 'Agent is speaking…'
+                                                        : 'Speak to fill the form or type below'}
                                                 </p>
                                             </div>
                                             {/* Live / muted indicator */}
-                                            {micMuted ? (
+                                            {status === 'connecting' ? null : micMuted ? (
                                                 <span className="shrink-0 flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-500 border border-gray-200">
                                                     <MicOff className="h-3 w-3" />
                                                     Muted
@@ -1022,8 +1197,14 @@ export default function AiConcierge({ product, autoStart = null, initialUserMess
                                             transition={{ duration: 0.18 }}
                                             className="flex shrink-0 flex-col items-center justify-center gap-2.5 py-6"
                                         >
-                                            <VoiceOrb isSpeaking={isSpeaking} status={status} />
-                                            {micMuted ? (
+                                            <HannahVoiceAvatar
+                                                audioMode={voiceAudioMode}
+                                                audioLevel={voiceAudioLevel}
+                                                status={status}
+                                            />
+                                            {status === 'connecting' ? (
+                                                <ConnectingSpinner />
+                                            ) : micMuted ? (
                                                 <span className="flex items-center gap-1.5 text-sm font-medium text-gray-500">
                                                     <MicOff className="h-4 w-4" />
                                                     Microphone muted
@@ -1176,15 +1357,7 @@ export default function AiConcierge({ product, autoStart = null, initialUserMess
                                 <div ref={messagesContainerRef} className="flex-1 overflow-y-auto space-y-2.5 px-4 py-4">
                                     {status === 'connecting' && (
                                         <div className="flex justify-center py-8">
-                                            <span className="flex items-center gap-1.5">
-                                                {[0, 150, 300].map((delay) => (
-                                                    <span
-                                                        key={delay}
-                                                        className="h-2 w-2 animate-bounce rounded-full bg-[#b59100]/60"
-                                                        style={{ animationDelay: `${delay}ms` }}
-                                                    />
-                                                ))}
-                                            </span>
+                                            <ConnectingSpinner />
                                         </div>
                                     )}
                                     {messages.map((m, i) => (
@@ -1271,12 +1444,6 @@ export default function AiConcierge({ product, autoStart = null, initialUserMess
                 </div>
             </section>
 
-            <style>{`
-                @keyframes voiceBar {
-                    from { transform: scaleY(0.4); }
-                    to   { transform: scaleY(1.2); }
-                }
-            `}</style>
         </>
     );
 }

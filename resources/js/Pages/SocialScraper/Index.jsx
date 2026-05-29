@@ -213,7 +213,7 @@ export default function SocialScraperPage() {
                         className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200"
                     >
                         <ArrowLeft className="h-4 w-4" />
-                        QR Products
+                        Rise Brands
                     </Link>
                     <span className="text-gray-300 dark:text-slate-600">/</span>
                     <h2 className="flex items-center gap-2 text-xl font-semibold leading-tight text-gray-800 dark:text-slate-200">

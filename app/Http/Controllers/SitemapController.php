@@ -29,7 +29,7 @@ class SitemapController extends Controller
             'Allow: /episodes',
             'Allow: /episodes/clips',
             'Allow: /sponsor-videos',
-            'Allow: /companies',
+            'Allow: /rise',
             'Allow: /episode/',
             'Allow: /episodes/clip/',
             'Allow: /sponsor-video/',
@@ -75,7 +75,7 @@ class SitemapController extends Controller
             ['loc' => $base . '/episodes', 'priority' => '0.9', 'changefreq' => 'weekly'],
             ['loc' => $base . '/episodes/clips', 'priority' => '0.9', 'changefreq' => 'weekly'],
             ['loc' => $base . '/sponsor-videos', 'priority' => '0.9', 'changefreq' => 'weekly'],
-            ['loc' => $base . '/companies', 'priority' => '0.9', 'changefreq' => 'weekly'],
+            ['loc' => $base . '/rise', 'priority' => '0.9', 'changefreq' => 'weekly'],
         ];
 
         foreach ($static as $entry) {
@@ -125,7 +125,7 @@ class SitemapController extends Controller
         foreach ($companies as $company) {
             $lastmod = ($company->updated_at ?? $company->created_at)?->toW3cString();
             $urls[] = $this->urlNode(
-                $base . '/company/' . $company->slug,
+                $base . '/rise/' . $company->slug,
                 $lastmod,
                 '0.7',
                 'weekly'

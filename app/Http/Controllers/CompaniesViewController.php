@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Meta;
 use App\Models\ProductQrList;
+use App\Support\ProductDescriptionExcerpt;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -44,11 +45,6 @@ class CompaniesViewController extends Controller
         } catch (\Throwable $e) {
             return $url;
         }
-    }
-
-    protected function stripHtml(?string $html): string
-    {
-        return trim(preg_replace('/\s+/', ' ', strip_tags((string) $html)));
     }
 
     protected function applyCompaniesListMeta(): void
@@ -97,21 +93,24 @@ class CompaniesViewController extends Controller
 
     protected function mapCompanyListItem(ProductQrList $company): array
     {
-        $images = $company->product_images ?? [];
-        $firstImage = is_array($images) ? ($images[0] ?? null) : null;
-        $thumbnail = $firstImage
-            ? ($this->temporaryUrlForStorageUrl((string) $firstImage) ?? (string) $firstImage)
+        $thumbSource = $company->video_thumbnail_url;
+        if (! $thumbSource) {
+            $images = $company->product_images ?? [];
+            $thumbSource = is_array($images) ? ($images[0] ?? null) : null;
+        }
+        $thumbnail = $thumbSource
+            ? ($this->temporaryUrlForStorageUrl((string) $thumbSource) ?? (string) $thumbSource)
             : null;
 
-        $plain = $this->stripHtml($company->product_description);
+        $plain = ProductDescriptionExcerpt::firstParagraph($company->product_description);
 
         return [
             'id' => $company->id,
             'slug' => $company->slug,
             'title' => $company->product_name,
-            'short_description' => $plain,
+            'short_description' => $plain !== '' ? $plain : null,
             'thumbnail_url' => $thumbnail,
-            'url' => url('/company/' . $company->slug),
+            'url' => route('product-enquiry.index', ['slug' => $company->slug]),
             'updated_at' => $company->updated_at?->toIso8601String(),
         ];
     }

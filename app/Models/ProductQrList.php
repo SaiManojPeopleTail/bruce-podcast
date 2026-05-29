@@ -15,6 +15,7 @@ class ProductQrList extends Model
         'product_images',
         'product_description',
         'video_url',
+        'video_thumbnail_url',
         'generated_qr_code_base64',
         'retailers',
         'first_message',

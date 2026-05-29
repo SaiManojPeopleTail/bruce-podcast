@@ -187,7 +187,7 @@ export default function AuthenticatedLayout({ header, children }) {
                             )}
                         </div>
 
-                        {/* ── QR Company group ── */}
+                        {/* ── Rise group ── */}
                         <div className="pt-1">
                             <button
                                 type="button"
@@ -199,7 +199,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                 }`}
                             >
                                 <QrCode className="h-5 w-5 shrink-0" />
-                                <span className="min-w-0 flex-1">QR Company</span>
+                                <span className="min-w-0 flex-1">Rise</span>
                                 <svg
                                     className={`h-4 w-4 shrink-0 text-gray-500 transition-transform dark:text-slate-400 ${qrNavOpen ? 'rotate-180' : ''}`}
                                     fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden
@@ -211,11 +211,11 @@ export default function AuthenticatedLayout({ header, children }) {
                                 <div className="mt-1 space-y-1 border-l border-gray-200 pl-3 dark:border-slate-600">
                                     <NavItem href={route('product-qr-lists.index')} active={route().current('product-qr-lists.*')}>
                                         <QrCode className="h-5 w-5 shrink-0" />
-                                        Companies
+                                        Brands
                                     </NavItem>
                                     <NavItem href={route('product-enquiries.index')} active={route().current('product-enquiries.*')}>
                                         <Inbox className="h-5 w-5 shrink-0" />
-                                        Enquiries
+                                        Rise Enquiries
                                     </NavItem>
                                 </div>
                             )}

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ElevenLabsKnowledgeBase;
 use App\Models\ProductQrList;
+use App\Support\ProductDescriptionExcerpt;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -115,6 +116,17 @@ class ProductQrListController extends Controller
         return $out;
     }
 
+    protected function uploadVideoThumbnail(Request $request, string $slug): ?string
+    {
+        if (! $request->hasFile('video_thumbnail')) {
+            return null;
+        }
+
+        $path = $request->file('video_thumbnail')->store("ads/{$slug}/video-thumbnail", $this->disk());
+
+        return Storage::disk($this->disk())->url($path);
+    }
+
     protected function migrateVideoUrlToNewSlug(string $oldSlug, string $newSlug, string $videoUrl): ?string
     {
         if ($oldSlug === $newSlug) {
@@ -175,7 +187,7 @@ class ProductQrListController extends Controller
         $companies = ProductQrList::where('is_active', true)
             ->orderByDesc('updated_at')
             ->limit(4)
-            ->get(['id', 'slug', 'product_name', 'product_description', 'product_images', 'updated_at', 'created_at']);
+            ->get(['id', 'slug', 'product_name', 'product_description', 'product_images', 'video_thumbnail_url', 'updated_at', 'created_at']);
 
         $appUrl = rtrim(config('app.url'), '/');
 
@@ -187,19 +199,23 @@ class ProductQrListController extends Controller
                 array_filter($images)
             ));
 
-            $plain = trim(preg_replace('/\s+/', ' ', strip_tags((string) ($company->product_description ?? ''))));
+            $plain = ProductDescriptionExcerpt::firstParagraph($company->product_description);
             $excerpt = mb_strlen($plain) > 160
                 ? rtrim(mb_substr($plain, 0, 157)) . '…'
                 : $plain;
+
+            $thumb = $company->video_thumbnail_url
+                ? ($this->temporaryUrlForStorageUrl($company->video_thumbnail_url) ?? $company->video_thumbnail_url)
+                : null;
 
             return [
                 'id'          => $company->id,
                 'name'        => $company->product_name,
                 'slug'        => $company->slug,
                 'excerpt'     => $excerpt ?: null,
-                'image'       => $signedImages[0] ?? null,
+                'image'       => $thumb ?? $signedImages[0] ?? null,
                 'images'      => $signedImages,
-                'url'         => $appUrl . '/company/' . $company->slug,
+                'url'         => route('product-enquiry.index', ['slug' => $company->slug]),
                 'updated_at'  => $company->updated_at?->toIso8601String(),
             ];
         });
@@ -258,6 +274,7 @@ class ProductQrListController extends Controller
             'shopify_image_urls' => ['nullable', 'array', 'max:20'],
             'shopify_image_urls.*' => ['nullable', 'string'],
             'video' => ['nullable', 'file', 'mimetypes:video/mp4,video/quicktime,video/x-msvideo,video/webm,video/x-matroska', 'max:512000'],
+            'video_thumbnail' => ['nullable', 'file', 'mimetypes:image/jpeg,image/png,image/gif,image/webp', 'max:10240'],
             'generated_qr_code_base64' => ['nullable', 'string'],
         ]);
 
@@ -270,6 +287,8 @@ class ProductQrListController extends Controller
             $path = $request->file('video')->store("ads/{$slug}/videos", $this->disk());
             $videoUrl = Storage::disk($this->disk())->url($path);
         }
+
+        $videoThumbnailUrl = $this->uploadVideoThumbnail($request, $slug);
 
         $retailers = [];
         if (! empty($validated['retailers'])) {
@@ -300,6 +319,7 @@ class ProductQrListController extends Controller
             'retailers' => ! empty($retailers) ? $retailers : null,
             'product_images' => ! empty($imageUrls) ? $imageUrls : null,
             'video_url' => $videoUrl,
+            'video_thumbnail_url' => $videoThumbnailUrl,
             'generated_qr_code_base64' => $validated['generated_qr_code_base64'] ?? null,
         ]);
 
@@ -308,7 +328,7 @@ class ProductQrListController extends Controller
             $this->uploadKbForProduct($product, $validated['kb_text'], $validated['kb_name'] ?? null);
         }
 
-        return redirect()->route('product-qr-lists.index')->with('success', 'QR Company created.');
+        return redirect()->route('product-qr-lists.index')->with('success', 'Rise brand created.');
     }
 
     public function edit(ProductQrList $productQrList)
@@ -322,6 +342,9 @@ class ProductQrListController extends Controller
         ));
         $product['signed_video_url'] = $productQrList->video_url
             ? ($this->temporaryUrlForStorageUrl($productQrList->video_url) ?? $productQrList->video_url)
+            : null;
+        $product['signed_video_thumbnail_url'] = $productQrList->video_thumbnail_url
+            ? ($this->temporaryUrlForStorageUrl($productQrList->video_thumbnail_url) ?? $productQrList->video_thumbnail_url)
             : null;
 
         $product['retailers']        = $productQrList->retailers ?? [];
@@ -362,7 +385,9 @@ class ProductQrListController extends Controller
             'shopify_image_urls' => ['nullable', 'array', 'max:20'],
             'shopify_image_urls.*' => ['nullable', 'string'],
             'video' => ['nullable', 'file', 'mimetypes:video/mp4,video/quicktime,video/x-msvideo,video/webm,video/x-matroska', 'max:512000'],
+            'video_thumbnail' => ['nullable', 'file', 'mimetypes:image/jpeg,image/png,image/gif,image/webp', 'max:10240'],
             'remove_video' => ['sometimes', 'boolean'],
+            'remove_video_thumbnail' => ['sometimes', 'boolean'],
             'generated_qr_code_base64' => ['nullable', 'string'],
             'retailers' => ['nullable', 'string'],
         ]);
@@ -382,6 +407,7 @@ class ProductQrListController extends Controller
         $this->deleteS3Files($removedUrls);
 
         $videoUrl = $productQrList->video_url;
+        $videoThumbnailUrl = $productQrList->video_thumbnail_url;
 
         if ($request->hasFile('video')) {
             if ($videoUrl) {
@@ -395,16 +421,36 @@ class ProductQrListController extends Controller
             $videoUrl = null;
         }
 
+        if ($request->hasFile('video_thumbnail')) {
+            if ($videoThumbnailUrl) {
+                $this->deleteS3Files([$videoThumbnailUrl]);
+            }
+            $videoThumbnailUrl = null;
+        } elseif ($request->boolean('remove_video_thumbnail')) {
+            if ($videoThumbnailUrl) {
+                $this->deleteS3Files([$videoThumbnailUrl]);
+            }
+            $videoThumbnailUrl = null;
+        }
+
         if ($oldSlug !== $newSlug) {
             $imageUrls = $this->migrateImageUrlsToNewSlug($oldSlug, $newSlug, $imageUrls);
             if ($videoUrl) {
                 $videoUrl = $this->migrateVideoUrlToNewSlug($oldSlug, $newSlug, $videoUrl);
+            }
+            if ($videoThumbnailUrl) {
+                $videoThumbnailUrl = $this->migrateVideoUrlToNewSlug($oldSlug, $newSlug, $videoThumbnailUrl);
             }
         }
 
         if ($request->hasFile('video')) {
             $path = $request->file('video')->store("ads/{$newSlug}/videos", $this->disk());
             $videoUrl = Storage::disk($this->disk())->url($path);
+        }
+
+        $uploadedThumb = $this->uploadVideoThumbnail($request, $newSlug);
+        if ($uploadedThumb !== null) {
+            $videoThumbnailUrl = $uploadedThumb;
         }
 
         if ($oldSlug !== $newSlug) {
@@ -439,11 +485,12 @@ class ProductQrListController extends Controller
             'social_posts' => $this->normalizeSocialPosts($validated['social_posts'] ?? null),
             'product_images' => ! empty($imageUrls) ? $imageUrls : null,
             'video_url' => $videoUrl,
+            'video_thumbnail_url' => $videoThumbnailUrl,
             'generated_qr_code_base64' => $validated['generated_qr_code_base64'] ?? $productQrList->generated_qr_code_base64,
             'retailers' => ! empty($retailers) ? $retailers : null,
         ]);
 
-        return redirect()->route('product-qr-lists.edit', $productQrList)->with('success', 'QR Company updated.');
+        return redirect()->route('product-qr-lists.edit', $productQrList)->with('success', 'Rise brand updated.');
     }
 
     public function destroy(ProductQrList $productQrList)
@@ -452,7 +499,7 @@ class ProductQrListController extends Controller
 
         $productQrList->delete();
 
-        return redirect()->route('product-qr-lists.index')->with('success', 'QR Company deleted.');
+        return redirect()->route('product-qr-lists.index')->with('success', 'Rise brand deleted.');
     }
 
     public function toggleActive(ProductQrList $productQrList): JsonResponse
