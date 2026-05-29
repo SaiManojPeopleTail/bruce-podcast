@@ -637,7 +637,7 @@ export default function ProductEnquiryShowV2({ slug, product }) {
                             controls
                             controlsList="nodownload"
                             playsInline
-                            muted
+                            // muted
                             preload="auto"
                             className="aspect-video h-auto w-full object-contain"
                             onLoadedMetadata={trySeekBannerThumb}
