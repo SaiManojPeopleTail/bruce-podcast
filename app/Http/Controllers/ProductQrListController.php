@@ -254,36 +254,16 @@ class ProductQrListController extends Controller
             'kb_name' => ['nullable', 'string', 'max:255'],
             'images' => ['nullable', 'array', 'max:20'],
             'images.*' => ['file', 'mimetypes:image/jpeg,image/png,image/gif,image/webp,image/bmp,image/svg+xml,video/mp4,video/quicktime,video/x-msvideo,video/webm,video/x-matroska', 'max:204800'],
+            'media_order' => ['nullable', 'string'],
+            'shopify_image_urls' => ['nullable', 'array', 'max:20'],
+            'shopify_image_urls.*' => ['nullable', 'string'],
             'video' => ['nullable', 'file', 'mimetypes:video/mp4,video/quicktime,video/x-msvideo,video/webm,video/x-matroska', 'max:512000'],
             'generated_qr_code_base64' => ['nullable', 'string'],
         ]);
 
         $slug = $validated['slug'];
 
-        $imageUrls = [];
-        foreach ($request->file('images', []) as $image) {
-            $path = $image->store("ads/{$slug}", $this->disk());
-            $imageUrls[] = Storage::disk($this->disk())->url($path);
-        }
-        // Shopify CDN URLs — fetch and re-upload to S3
-        $shopifyUrls = $request->input('shopify_image_urls', []);
-        if (! empty($shopifyUrls)) {
-            set_time_limit(max(300, ini_get('max_execution_time')));
-        }
-        foreach ($shopifyUrls as $cdnUrl) {
-            if (! filter_var($cdnUrl, FILTER_VALIDATE_URL)) continue;
-            try {
-                $res = Http::timeout(15)->get($cdnUrl);
-                if (! $res->successful()) continue;
-                $ext = strtolower(pathinfo(parse_url($cdnUrl, PHP_URL_PATH), PATHINFO_EXTENSION)) ?: 'jpg';
-                $ext = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp']) ? $ext : 'jpg';
-                $path = "ads/{$slug}/shopify_" . Str::random(10) . ".{$ext}";
-                Storage::disk($this->disk())->put($path, $res->body());
-                $imageUrls[] = Storage::disk($this->disk())->url($path);
-            } catch (\Throwable $e) {
-                Log::warning("Shopify image upload failed: {$cdnUrl} — {$e->getMessage()}");
-            }
-        }
+        $imageUrls = $this->buildProductImagesFromOrder($request, $slug);
 
         $videoUrl = null;
         if ($request->hasFile('video')) {
@@ -378,6 +358,9 @@ class ProductQrListController extends Controller
             'images.*' => ['file', 'mimetypes:image/jpeg,image/png,image/gif,image/webp,image/bmp,image/svg+xml,video/mp4,video/quicktime,video/x-msvideo,video/webm,video/x-matroska', 'max:204800'],
             'existing_images' => ['nullable', 'array', 'max:20'],
             'existing_images.*' => ['nullable', 'string'],
+            'media_order' => ['nullable', 'string'],
+            'shopify_image_urls' => ['nullable', 'array', 'max:20'],
+            'shopify_image_urls.*' => ['nullable', 'string'],
             'video' => ['nullable', 'file', 'mimetypes:video/mp4,video/quicktime,video/x-msvideo,video/webm,video/x-matroska', 'max:512000'],
             'remove_video' => ['sometimes', 'boolean'],
             'generated_qr_code_base64' => ['nullable', 'string'],
@@ -392,13 +375,12 @@ class ProductQrListController extends Controller
         }
 
         $oldSlug = $productQrList->slug;
-
-        $keptUrls = collect($request->input('existing_images', []))->filter()->values()->all();
         $oldUrls = $productQrList->product_images ?? [];
-        $removedUrls = array_diff($oldUrls, $keptUrls);
-        $this->deleteS3Files(array_values($removedUrls));
 
-        $imageUrls = $keptUrls;
+        $imageUrls = $this->buildProductImagesFromOrder($request, $newSlug, $oldUrls);
+        $removedUrls = array_values(array_diff($oldUrls, $imageUrls));
+        $this->deleteS3Files($removedUrls);
+
         $videoUrl = $productQrList->video_url;
 
         if ($request->hasFile('video')) {
@@ -417,34 +399,6 @@ class ProductQrListController extends Controller
             $imageUrls = $this->migrateImageUrlsToNewSlug($oldSlug, $newSlug, $imageUrls);
             if ($videoUrl) {
                 $videoUrl = $this->migrateVideoUrlToNewSlug($oldSlug, $newSlug, $videoUrl);
-            }
-        }
-
-        foreach ($request->file('images', []) as $image) {
-            if (count($imageUrls) >= 20) {
-                break;
-            }
-            $path = $image->store("ads/{$newSlug}", $this->disk());
-            $imageUrls[] = Storage::disk($this->disk())->url($path);
-        }
-        // Shopify CDN URLs — fetch and re-upload to S3
-        $shopifyUrls = $request->input('shopify_image_urls', []);
-        if (! empty($shopifyUrls)) {
-            set_time_limit(max(300, ini_get('max_execution_time')));
-        }
-        foreach ($shopifyUrls as $cdnUrl) {
-            if (count($imageUrls) >= 20) break;
-            if (! filter_var($cdnUrl, FILTER_VALIDATE_URL)) continue;
-            try {
-                $res = Http::timeout(15)->get($cdnUrl);
-                if (! $res->successful()) continue;
-                $ext = strtolower(pathinfo(parse_url($cdnUrl, PHP_URL_PATH), PATHINFO_EXTENSION)) ?: 'jpg';
-                $ext = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp']) ? $ext : 'jpg';
-                $path = "ads/{$newSlug}/shopify_" . Str::random(10) . ".{$ext}";
-                Storage::disk($this->disk())->put($path, $res->body());
-                $imageUrls[] = Storage::disk($this->disk())->url($path);
-            } catch (\Throwable $e) {
-                Log::warning("Shopify image upload failed: {$cdnUrl} — {$e->getMessage()}");
             }
         }
 
@@ -622,6 +576,135 @@ class ProductQrListController extends Controller
             ]);
         } catch (\Throwable $e) {
             Log::error('[ProductQrList] KB upload exception', ['message' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Build ordered product_images from media_order JSON (upload / existing / shopify entries).
+     *
+     * @param  list<string>  $allowedExistingUrls
+     * @return list<string>
+     */
+    private function buildProductImagesFromOrder(Request $request, string $slug, array $allowedExistingUrls = []): array
+    {
+        $rawOrder = $request->input('media_order');
+        $order = is_string($rawOrder) && $rawOrder !== '' ? json_decode($rawOrder, true) : null;
+
+        if (! is_array($order) || $order === []) {
+            return $this->buildProductImagesLegacy($request, $slug, $allowedExistingUrls);
+        }
+
+        if ($this->orderContainsShopify($order)) {
+            set_time_limit(max(300, ini_get('max_execution_time')));
+        }
+
+        $files = $request->file('images', []);
+        $allowed = $allowedExistingUrls !== [] ? array_flip($allowedExistingUrls) : null;
+        $imageUrls = [];
+
+        foreach ($order as $entry) {
+            if (count($imageUrls) >= 20 || ! is_array($entry)) {
+                continue;
+            }
+
+            $kind = $entry['kind'] ?? '';
+            if ($kind === 'existing') {
+                $url = (string) ($entry['url'] ?? '');
+                if ($url === '') {
+                    continue;
+                }
+                if ($allowed !== null && ! isset($allowed[$url])) {
+                    continue;
+                }
+                $imageUrls[] = $url;
+            } elseif ($kind === 'upload') {
+                $index = (int) ($entry['index'] ?? -1);
+                $file = $files[$index] ?? null;
+                if (! $file) {
+                    continue;
+                }
+                $path = $file->store("ads/{$slug}", $this->disk());
+                $imageUrls[] = Storage::disk($this->disk())->url($path);
+            } elseif ($kind === 'shopify') {
+                $cdnUrl = (string) ($entry['url'] ?? '');
+                $uploaded = $this->uploadShopifyCdnImage($slug, $cdnUrl);
+                if ($uploaded) {
+                    $imageUrls[] = $uploaded;
+                }
+            }
+        }
+
+        return $imageUrls;
+    }
+
+    /** @param  list<mixed>  $order */
+    private function orderContainsShopify(array $order): bool
+    {
+        foreach ($order as $entry) {
+            if (is_array($entry) && ($entry['kind'] ?? '') === 'shopify') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  list<string>  $allowedExistingUrls
+     * @return list<string>
+     */
+    private function buildProductImagesLegacy(Request $request, string $slug, array $allowedExistingUrls = []): array
+    {
+        $imageUrls = $allowedExistingUrls !== []
+            ? collect($request->input('existing_images', []))->filter()->values()->all()
+            : [];
+
+        foreach ($request->file('images', []) as $image) {
+            if (count($imageUrls) >= 20) {
+                break;
+            }
+            $path = $image->store("ads/{$slug}", $this->disk());
+            $imageUrls[] = Storage::disk($this->disk())->url($path);
+        }
+
+        $shopifyUrls = $request->input('shopify_image_urls', []);
+        if (! empty($shopifyUrls)) {
+            set_time_limit(max(300, ini_get('max_execution_time')));
+        }
+        foreach ($shopifyUrls as $cdnUrl) {
+            if (count($imageUrls) >= 20) {
+                break;
+            }
+            $uploaded = $this->uploadShopifyCdnImage($slug, (string) $cdnUrl);
+            if ($uploaded) {
+                $imageUrls[] = $uploaded;
+            }
+        }
+
+        return $imageUrls;
+    }
+
+    private function uploadShopifyCdnImage(string $slug, string $cdnUrl): ?string
+    {
+        if (! filter_var($cdnUrl, FILTER_VALIDATE_URL)) {
+            return null;
+        }
+
+        try {
+            $res = Http::timeout(15)->get($cdnUrl);
+            if (! $res->successful()) {
+                return null;
+            }
+            $ext = strtolower(pathinfo(parse_url($cdnUrl, PHP_URL_PATH), PATHINFO_EXTENSION)) ?: 'jpg';
+            $ext = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'], true) ? $ext : 'jpg';
+            $path = "ads/{$slug}/shopify_" . Str::random(10) . ".{$ext}";
+            Storage::disk($this->disk())->put($path, $res->body());
+
+            return Storage::disk($this->disk())->url($path);
+        } catch (\Throwable $e) {
+            Log::warning("Shopify image upload failed: {$cdnUrl} — {$e->getMessage()}");
+
+            return null;
         }
     }
 

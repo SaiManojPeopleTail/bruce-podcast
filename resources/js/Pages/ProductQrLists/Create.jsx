@@ -1,15 +1,23 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
+import SortableMediaGrid from '@/Components/Admin/SortableMediaGrid';
 import ProductContentExtractorModal from '@/Components/Admin/ProductContentExtractorModal';
 import RetailersEditor, { resolveRetailerConflicts } from '@/Components/Admin/RetailersEditor';
 import SocialPostsManager from '@/Components/Admin/SocialPostsManager';
 import PrimaryButton from '@/Components/PrimaryButton';
 import RichTextEditor from '@/Components/RichTextEditor';
+import {
+    buildMediaFormPayload,
+    createShopifyItem,
+    createUploadItem,
+    isVideoFile,
+    revokeUploadPreviews,
+} from '@/lib/productMediaItems';
 import { Head, router } from '@inertiajs/react';
 import { ReactQRCode } from '@lglab/react-qr-code';
 import axios from 'axios';
-import { AlertTriangle, BookOpen, CheckCircle, CheckCircle2, Film, ImagePlus, Loader2, Video, X, XCircle } from 'lucide-react';
+import { AlertTriangle, BookOpen, CheckCircle, CheckCircle2, ImagePlus, Loader2, Video, X, XCircle } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 
@@ -20,10 +28,6 @@ const QR_SETTINGS = {
 };
 const MAX_MEDIA = 20;
 const GALLERY_VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/webm', 'video/x-matroska'];
-
-function isVideoFile(file) {
-    return GALLERY_VIDEO_TYPES.includes(file.type) || /\.(mp4|mov|avi|webm|mkv|m4v)$/i.test(file.name);
-}
 
 function toSlug(str) {
     return str
@@ -72,11 +76,7 @@ export default function Create() {
     const [pendingKbName, setPendingKbName] = useState('');
     const [firstMessage, setFirstMessage] = useState('');
     const [voiceId, setVoiceId] = useState('');
-    const [shopifyImageUrls, setShopifyImageUrls] = useState([]); // external CDN URLs from Shopify picker
-    // Gallery media: parallel arrays of File and {url, type}
-    const [mediaFiles, setMediaFiles] = useState([]); // File[]
-    const [mediaPreviews, setMediaPreviews] = useState([]); // {url: string, type: 'image'|'video'}[]
-    const mediaObjectUrlsRef = useRef([]);
+    const [mediaItems, setMediaItems] = useState([]);
     const [video, setVideo] = useState(null);
     const [videoName, setVideoName] = useState('');
     const [notificationEmail, setNotificationEmail] = useState('');
@@ -87,8 +87,9 @@ export default function Create() {
     const [draggingVideo, setDraggingVideo] = useState(false);
     const [showAutoModal, setShowAutoModal] = useState(false);
 
-    // Revoke object URLs on unmount
-    useEffect(() => () => { mediaObjectUrlsRef.current.forEach(URL.revokeObjectURL); }, []);
+    const mediaItemsRef = useRef(mediaItems);
+    useEffect(() => { mediaItemsRef.current = mediaItems; });
+    useEffect(() => () => { revokeUploadPreviews(mediaItemsRef.current); }, []);
 
     const qrUrl = slug
         ? `${window.location.origin}/company/${slug}`
@@ -132,16 +133,10 @@ export default function Create() {
     }, []);
 
     const addMediaFiles = (files) => {
-        const remaining = MAX_MEDIA - mediaFiles.length;
+        const remaining = MAX_MEDIA - mediaItems.length;
         const toAdd = files.slice(0, remaining);
         if (!toAdd.length) return;
-        const newPreviews = toAdd.map((file) => {
-            const url = URL.createObjectURL(file);
-            mediaObjectUrlsRef.current.push(url);
-            return { url, type: isVideoFile(file) ? 'video' : 'image' };
-        });
-        setMediaFiles((prev) => [...prev, ...toAdd]);
-        setMediaPreviews((prev) => [...prev, ...newPreviews]);
+        setMediaItems((prev) => [...prev, ...toAdd.map((file) => createUploadItem(file))]);
     };
 
     const handleMediaChange = (e) => {
@@ -150,10 +145,11 @@ export default function Create() {
     };
 
     const removeMediaItem = (index) => {
-        setMediaFiles((prev) => prev.filter((_, i) => i !== index));
-        setMediaPreviews((prev) => {
+        setMediaItems((prev) => {
             const removed = prev[index];
-            if (removed?.url) URL.revokeObjectURL(removed.url);
+            if (removed?.kind === 'upload' && removed.previewUrl?.startsWith('blob:')) {
+                URL.revokeObjectURL(removed.previewUrl);
+            }
             return prev.filter((_, i) => i !== index);
         });
     };
@@ -167,7 +163,7 @@ export default function Create() {
     const handleMediaDrop = (e) => {
         e.preventDefault();
         setDraggingMedia(false);
-        if (mediaFiles.length >= MAX_MEDIA) return;
+        if (mediaItems.length >= MAX_MEDIA) return;
         const files = Array.from(e.dataTransfer.files).filter(
             (f) => f.type.startsWith('image/') || isVideoFile(f),
         );
@@ -234,16 +230,19 @@ export default function Create() {
         if (resolvedRetailers.length > 0) {
             fd.append('retailers', JSON.stringify(resolvedRetailers));
         }
-        mediaFiles.forEach((file, i) => fd.append(`images[${i}]`, file));
-        shopifyImageUrls.forEach((url, i) => fd.append(`shopify_image_urls[${i}]`, url));
+        const { uploads, order } = buildMediaFormPayload(mediaItems);
+        uploads.forEach((file, i) => fd.append(`images[${i}]`, file));
+        if (order.length > 0) {
+            fd.append('media_order', JSON.stringify(order));
+        }
         if (video) fd.append('video', video);
 
-        const hasShopifyImages = shopifyImageUrls.length > 0;
+        const hasShopifyImages = mediaItems.some((item) => item.kind === 'shopify');
         const hasKb = pendingKbText.trim().length >= 100;
 
         const steps = [
             { id: 'save', label: 'Creating QR Company…', status: 'active' },
-            ...(hasShopifyImages ? [{ id: 'images', label: `Uploading ${shopifyImageUrls.length} product image${shopifyImageUrls.length > 1 ? 's' : ''} to S3…`, status: 'active' }] : []),
+            ...(hasShopifyImages ? [{ id: 'images', label: `Uploading ${mediaItems.filter((i) => i.kind === 'shopify').length} product image${mediaItems.filter((i) => i.kind === 'shopify').length > 1 ? 's' : ''} to S3…`, status: 'active' }] : []),
             ...(hasKb ? [{ id: 'kb', label: 'Uploading knowledge base…', status: 'active' }] : []),
         ];
         setSaveProgress({ steps, error: null });
@@ -426,40 +425,20 @@ export default function Create() {
                             <div className="mb-2 flex items-center justify-between">
                                 <InputLabel value={`Product Media (up to ${MAX_MEDIA})`} />
                                 <span className="text-xs text-gray-500 dark:text-slate-400">
-                                    {mediaFiles.length} / {MAX_MEDIA}
+                                    {mediaItems.length} / {MAX_MEDIA}
                                 </span>
                             </div>
 
-                            {mediaPreviews.length > 0 && (
-                                <div className="mb-3 flex flex-wrap gap-3">
-                                    {mediaPreviews.map((item, i) => (
-                                        <div key={i} className="group relative h-24 w-24 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 shadow-sm dark:border-slate-600 dark:bg-slate-700">
-                                            {item.type === 'video' ? (
-                                                <>
-                                                    <video src={item.url} muted preload="metadata" className="h-full w-full object-cover" />
-                                                    <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                                                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black/55">
-                                                            <Film className="h-4 w-4 text-white" />
-                                                        </div>
-                                                    </div>
-                                                </>
-                                            ) : (
-                                                <img src={item.url} alt="" className="h-full w-full object-cover" />
-                                            )}
-                                            <button
-                                                type="button"
-                                                onClick={() => removeMediaItem(i)}
-                                                className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity group-hover:opacity-100"
-                                                aria-label="Remove"
-                                            >
-                                                <X className="h-3.5 w-3.5" />
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
+                            <SortableMediaGrid
+                                items={mediaItems}
+                                onChange={setMediaItems}
+                                onRemove={removeMediaItem}
+                            />
+                            {mediaItems.length > 0 && (
+                                <p className="mb-2 text-xs text-gray-400 dark:text-slate-500">Drag thumbnails to reorder — order is used on the public page</p>
                             )}
 
-                            {mediaFiles.length < MAX_MEDIA && (
+                            {mediaItems.length < MAX_MEDIA && (
                                 <label
                                     className={`flex cursor-pointer items-center gap-3 rounded-lg border border-dashed px-4 py-4 transition ${
                                         draggingMedia
@@ -490,34 +469,6 @@ export default function Create() {
                                 </label>
                             )}
                             <InputError message={errors.images} className="mt-1" />
-
-                            {/* Shopify images preview */}
-                            {shopifyImageUrls.length > 0 && (
-                                <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-900/50 dark:bg-emerald-900/20">
-                                    <div className="mb-2 flex items-center justify-between">
-                                        <span className="text-xs font-semibold text-emerald-800 dark:text-emerald-200">
-                                            {shopifyImageUrls.length} Shopify image{shopifyImageUrls.length > 1 ? 's' : ''} will be saved
-                                        </span>
-                                        <button type="button" onClick={() => setShopifyImageUrls([])} className="text-xs text-emerald-600 hover:text-emerald-800 dark:text-emerald-400">
-                                            Clear
-                                        </button>
-                                    </div>
-                                    <div className="flex flex-wrap gap-1.5">
-                                        {shopifyImageUrls.map((url, i) => (
-                                            <div key={i} className="group relative h-12 w-12 shrink-0">
-                                                <img src={url} alt="" className="h-full w-full rounded object-cover" loading="lazy" />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShopifyImageUrls((prev) => prev.filter((_, idx) => idx !== i))}
-                                                    className="absolute -right-1 -top-1 hidden h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white shadow group-hover:flex"
-                                                >
-                                                    <span className="text-[9px] font-bold leading-none">✕</span>
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
                         </div>
 
                         {/* Video */}
@@ -718,7 +669,11 @@ export default function Create() {
                     }
                     // Shopify selected images
                     if (result?.shopify_image_urls?.length) {
-                        setShopifyImageUrls(result.shopify_image_urls);
+                        setMediaItems((prev) => {
+                            const remaining = MAX_MEDIA - prev.length;
+                            const toAdd = result.shopify_image_urls.slice(0, remaining).map((url) => createShopifyItem(url));
+                            return [...prev, ...toAdd];
+                        });
                     }
                 }}
             />

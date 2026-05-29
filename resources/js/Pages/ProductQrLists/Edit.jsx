@@ -1,15 +1,24 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
+import SortableMediaGrid from '@/Components/Admin/SortableMediaGrid';
 import KnowledgeBaseCard from '@/Components/Admin/KnowledgeBaseCard';
 import ProductContentExtractorModal from '@/Components/Admin/ProductContentExtractorModal';
 import RetailersEditor, { resolveRetailerConflicts } from '@/Components/Admin/RetailersEditor';
 import SocialPostsManager from '@/Components/Admin/SocialPostsManager';
 import RichTextEditor from '@/Components/RichTextEditor';
+import {
+    buildMediaFormPayload,
+    createExistingItem,
+    createShopifyItem,
+    createUploadItem,
+    isVideoFile,
+    revokeUploadPreviews,
+} from '@/lib/productMediaItems';
 import { Head, Link, router } from '@inertiajs/react';
 import { ReactQRCode } from '@lglab/react-qr-code';
 import axios from 'axios';
-import { AlertTriangle, CheckCircle, CheckCircle2, Film, ImagePlus, Loader2, Video, X, XCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle, CheckCircle2, ImagePlus, Loader2, Video, X, XCircle } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 
@@ -20,16 +29,6 @@ const QR_SETTINGS = {
 };
 const MAX_MEDIA = 20;
 const GALLERY_VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/webm', 'video/x-matroska'];
-
-function isVideoFile(file) {
-    return GALLERY_VIDEO_TYPES.includes(file.type) || /\.(mp4|mov|avi|webm|mkv|m4v)$/i.test(file.name);
-}
-
-function isVideoUrl(url) {
-    if (!url) return false;
-    const path = url.split('?')[0].toLowerCase();
-    return /\.(mp4|mov|avi|webm|mkv|m4v|ogv)(\b|$)/.test(path);
-}
 
 async function captureQrAsPng(svgEl) {
     if (!svgEl) return null;
@@ -68,23 +67,16 @@ export default function Edit({ product }) {
     const [retailers, setRetailers] = useState(() => hydrateRetailers(product.retailers));
     const [pendingConflict, setPendingConflict] = useState(null);
 
-    // Canonical URLs stored in DB (sent back as existing_images on save)
-    const [existingImages, setExistingImages] = useState(() => [...(product.product_images ?? [])]);
-    // Signed URLs for <img src> (private S3), aligned by index with existingImages
-    const [existingImageDisplaySrc, setExistingImageDisplaySrc] = useState(() => {
+    const [mediaItems, setMediaItems] = useState(() => {
         const canonical = product.product_images ?? [];
         const signed = product.signed_product_images ?? [];
-        return canonical.map((url, i) => (typeof signed[i] === 'string' ? signed[i] : url));
+        return canonical.map((url, i) => createExistingItem(url, signed[i]));
     });
     const [pendingRemoveIdx, setPendingRemoveIdx] = useState(null);
-    const [shopifyImageUrls, setShopifyImageUrls] = useState([]); // external CDN URLs from Shopify picker
-    // New files to upload
-    const [newMediaFiles, setNewMediaFiles] = useState([]); // File[]
-    const [newMediaPreviews, setNewMediaPreviews] = useState([]); // {url, type}[]
-    const newMediaObjectUrlsRef = useRef([]);
 
-    // Revoke new-file object URLs on unmount
-    useEffect(() => () => { newMediaObjectUrlsRef.current.forEach(URL.revokeObjectURL); }, []);
+    const mediaItemsRef = useRef(mediaItems);
+    useEffect(() => { mediaItemsRef.current = mediaItems; });
+    useEffect(() => () => { revokeUploadPreviews(mediaItemsRef.current); }, []);
 
     const existingVideoUrl = product.video_url ?? null;
     /** True after user confirms delete; video is removed from S3 on save unless a new file is uploaded. */
@@ -173,19 +165,13 @@ export default function Edit({ product }) {
         return null;
     };
 
-    const totalMedia = existingImages.length + newMediaFiles.length;
+    const totalMedia = mediaItems.length;
 
     const addNewMediaFiles = (files) => {
         const remaining = MAX_MEDIA - totalMedia;
         const toAdd = files.slice(0, remaining);
         if (!toAdd.length) return;
-        const previews = toAdd.map((file) => {
-            const url = URL.createObjectURL(file);
-            newMediaObjectUrlsRef.current.push(url);
-            return { url, type: isVideoFile(file) ? 'video' : 'image' };
-        });
-        setNewMediaFiles((prev) => [...prev, ...toAdd]);
-        setNewMediaPreviews((prev) => [...prev, ...previews]);
+        setMediaItems((prev) => [...prev, ...toAdd.map((file) => createUploadItem(file))]);
     };
 
     const handleNewMediaChange = (e) => {
@@ -193,19 +179,23 @@ export default function Edit({ product }) {
         e.target.value = '';
     };
 
-    const removeExistingImage = (index) => {
-        setExistingImages((prev) => prev.filter((_, i) => i !== index));
-        setExistingImageDisplaySrc((prev) => prev.filter((_, i) => i !== index));
+    const removeMediaItem = (index) => {
+        setMediaItems((prev) => {
+            const removed = prev[index];
+            if (removed?.kind === 'upload' && removed.previewUrl?.startsWith('blob:')) {
+                URL.revokeObjectURL(removed.previewUrl);
+            }
+            return prev.filter((_, i) => i !== index);
+        });
         setPendingRemoveIdx(null);
     };
 
-    const removeNewMedia = (index) => {
-        setNewMediaFiles((prev) => prev.filter((_, i) => i !== index));
-        setNewMediaPreviews((prev) => {
-            const removed = prev[index];
-            if (removed?.url) URL.revokeObjectURL(removed.url);
-            return prev.filter((_, i) => i !== index);
-        });
+    const handleRemoveMedia = (index) => {
+        if (mediaItems[index]?.kind === 'existing') {
+            setPendingRemoveIdx(index);
+            return;
+        }
+        removeMediaItem(index);
     };
 
     const handleVideoChange = (e) => {
@@ -286,9 +276,11 @@ export default function Edit({ product }) {
             fd.append('retailers', JSON.stringify(resolvedRetailers));
         }
 
-        existingImages.forEach((url, i) => fd.append(`existing_images[${i}]`, url));
-        newMediaFiles.forEach((file, i) => fd.append(`images[${i}]`, file));
-        shopifyImageUrls.forEach((url, i) => fd.append(`shopify_image_urls[${i}]`, url));
+        const { uploads, order } = buildMediaFormPayload(mediaItems);
+        uploads.forEach((file, i) => fd.append(`images[${i}]`, file));
+        if (order.length > 0) {
+            fd.append('media_order', JSON.stringify(order));
+        }
         if (video) {
             fd.append('video', video);
         } else if (videoRemovedPending) {
@@ -499,62 +491,13 @@ export default function Edit({ product }) {
                                 </span>
                             </div>
 
-                            {(existingImages.length > 0 || newMediaPreviews.length > 0) && (
-                                <div className="mb-3 flex flex-wrap gap-3">
-                                    {existingImages.map((canonicalUrl, i) => {
-                                        const displaySrc = existingImageDisplaySrc[i] ?? canonicalUrl;
-                                        const isVid = isVideoUrl(displaySrc);
-                                        return (
-                                            <div key={canonicalUrl || `existing-${i}`} className="group relative h-24 w-24 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 shadow-sm dark:border-slate-600 dark:bg-slate-700">
-                                                {isVid ? (
-                                                    <>
-                                                        <video src={displaySrc} muted preload="metadata" className="h-full w-full object-cover" />
-                                                        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                                                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black/55">
-                                                                <Film className="h-4 w-4 text-white" />
-                                                            </div>
-                                                        </div>
-                                                    </>
-                                                ) : (
-                                                    <img src={displaySrc} alt="" className="h-full w-full object-cover" />
-                                                )}
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setPendingRemoveIdx(i)}
-                                                    className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity group-hover:opacity-100"
-                                                    aria-label="Remove"
-                                                >
-                                                    <X className="h-3.5 w-3.5" />
-                                                </button>
-                                            </div>
-                                        );
-                                    })}
-                                    {newMediaPreviews.map((item, i) => (
-                                        <div key={`new-${i}`} className="group relative h-24 w-24 overflow-hidden rounded-lg border border-indigo-200 bg-gray-50 shadow-sm dark:border-indigo-700 dark:bg-slate-700">
-                                            {item.type === 'video' ? (
-                                                <>
-                                                    <video src={item.url} muted preload="metadata" className="h-full w-full object-cover" />
-                                                    <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                                                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black/55">
-                                                            <Film className="h-4 w-4 text-white" />
-                                                        </div>
-                                                    </div>
-                                                </>
-                                            ) : (
-                                                <img src={item.url} alt="" className="h-full w-full object-cover" />
-                                            )}
-                                            <span className="absolute bottom-0 left-0 right-0 bg-indigo-600/70 py-0.5 text-center text-[9px] text-white">new</span>
-                                            <button
-                                                type="button"
-                                                onClick={() => removeNewMedia(i)}
-                                                className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity group-hover:opacity-100"
-                                                aria-label="Remove"
-                                            >
-                                                <X className="h-3.5 w-3.5" />
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
+                            <SortableMediaGrid
+                                items={mediaItems}
+                                onChange={setMediaItems}
+                                onRemove={handleRemoveMedia}
+                            />
+                            {mediaItems.length > 0 && (
+                                <p className="mb-2 text-xs text-gray-400 dark:text-slate-500">Drag thumbnails to reorder — order is used on the public page</p>
                             )}
 
                             {totalMedia < MAX_MEDIA && (
@@ -588,34 +531,6 @@ export default function Edit({ product }) {
                                 </label>
                             )}
                             <InputError message={errors.images} className="mt-1" />
-
-                            {/* Shopify images preview */}
-                            {shopifyImageUrls.length > 0 && (
-                                <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-900/50 dark:bg-emerald-900/20">
-                                    <div className="mb-2 flex items-center justify-between">
-                                        <span className="text-xs font-semibold text-emerald-800 dark:text-emerald-200">
-                                            {shopifyImageUrls.length} Shopify image{shopifyImageUrls.length > 1 ? 's' : ''} will be saved
-                                        </span>
-                                        <button type="button" onClick={() => setShopifyImageUrls([])} className="text-xs text-emerald-600 hover:text-emerald-800 dark:text-emerald-400">
-                                            Clear
-                                        </button>
-                                    </div>
-                                    <div className="flex flex-wrap gap-1.5">
-                                        {shopifyImageUrls.map((url, i) => (
-                                            <div key={i} className="group relative h-12 w-12 shrink-0">
-                                                <img src={url} alt="" className="h-full w-full rounded object-cover" loading="lazy" />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShopifyImageUrls((prev) => prev.filter((_, idx) => idx !== i))}
-                                                    className="absolute -right-1 -top-1 hidden h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white shadow group-hover:flex"
-                                                >
-                                                    <span className="text-[9px] font-bold leading-none">✕</span>
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
                         </div>
 
                         {/* Video */}
@@ -817,7 +732,7 @@ export default function Edit({ product }) {
                             </button>
                             <button
                                 type="button"
-                                onClick={() => removeExistingImage(pendingRemoveIdx)}
+                                onClick={() => removeMediaItem(pendingRemoveIdx)}
                                 className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
                             >
                                 Yes, remove
@@ -892,7 +807,11 @@ export default function Edit({ product }) {
                     }
                     // Shopify selected images
                     if (result?.shopify_image_urls?.length) {
-                        setShopifyImageUrls(result.shopify_image_urls);
+                        setMediaItems((prev) => {
+                            const remaining = MAX_MEDIA - prev.length;
+                            const toAdd = result.shopify_image_urls.slice(0, remaining).map((url) => createShopifyItem(url));
+                            return [...prev, ...toAdd];
+                        });
                     }
                 }}
             />
